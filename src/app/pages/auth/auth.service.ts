@@ -146,7 +146,7 @@ export class AuthService {
             return throwError(() => new Error('No refresh token'));
         }
 
-        return this._httpClient.post(`${environment.authenticationApiUrl}/refresh`, { token: refreshToken }).pipe(
+        return this._httpClient.post(`${environment.baseUrl}/refresh`, { token: refreshToken }).pipe(
             switchMap((response: any) => {
                 this.accessToken = response?.accessToken;
                 this.refreshToken = response?.refreshToken;
@@ -157,6 +157,10 @@ export class AuthService {
                 return throwError(() => new Error('Error refreshing token'));
             }),
         );
+    }
+
+    register(data: any): Observable<any> {
+        return this._httpClient.post(`${environment.baseUrl}/auth/register`, data);
     }
 
 }

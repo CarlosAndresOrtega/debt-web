@@ -30,14 +30,13 @@ import { MessageModule } from 'primeng/message';
             <div class="bg-white w-full lg:rounded-2xl lg:overflow-hidden lg:max-w-5xl flex flex-col lg:flex-row lg:shadow-lg dark:bg-gray-800 dark:text-white transition-colors duration-200">
                 <!-- Left side - Login Form -->
                 <div class="w-full lg:w-1/2 p-12 flex flex-col">
-
                     <!-- Login Header -->
                     <h1 class="text-3xl font-bold text-gray-800 mb-8 dark:text-white transition-colors duration-200">Ingreso</h1>
 
                     <!-- Login Form -->
                     <form [formGroup]="loginForm" class="w-full">
                         <div class="mb-6">
-                            <label for="email" class="block text-gray-700 mb-2 text-sm dark:text-gray-300 transition-colors duration-200">User *</label>
+                            <label for="email" class="block text-gray-700 mb-2 text-sm dark:text-gray-300 transition-colors duration-200">Email *</label>
                             <input id="email" pInputText type="text" class="w-full p-3 border border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors duration-200" formControlName="email" />
                         </div>
 
@@ -63,6 +62,10 @@ import { MessageModule } from 'primeng/message';
                             </span>
                         </button>
                     </form>
+                    <div class="mt-6 text-center">
+                        <span class="text-gray-600 dark:text-gray-400 text-sm">¿No tienes una cuenta? </span>
+                        <a routerLink="/auth/register" class="text-orange-500 font-semibold hover:underline text-sm cursor-pointer"> Crear usuario </a>
+                    </div>
                 </div>
 
                 <!-- Right side - Welcome Content -->
