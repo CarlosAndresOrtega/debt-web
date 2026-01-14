@@ -89,7 +89,7 @@ import { MessageModule } from 'primeng/message';
                     </svg>
 
                     <div class="z-10">
-                        <h1 class="text-5xl font-bold mb-6">Bienvenido<br />Libros Carlos.</h1>
+                        <h1 class="text-5xl font-bold mb-6">Bienvenido<br />Gestión de Deudas.</h1>
                         <p class="text-base mb-16 opacity-90">
                             Explorá y gestioná fácilmente todo el catálogo de libros con nuestra aplicación. Visualizá datos actualizados, organizá tus búsquedas y accedé a herramientas avanzadas de scraping para encontrar lo que necesitás sin
                             complicaciones.

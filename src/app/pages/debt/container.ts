@@ -7,7 +7,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { Table, TableModule } from 'primeng/table';
 import { ToolbarModule } from 'primeng/toolbar';
-// import { debtsService } from './books.service';
+// import { debtsService } from './debts.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { DrawerModule } from 'primeng/drawer';
 import { LayoutService } from '@/layout/service/layout.service';
@@ -35,19 +35,19 @@ import { DrawerService } from '@/common/services/drawer.service';
 import { DrawerFactory } from '@/common/services/drawer-factory.service';
 import { DebtsService } from './debts.service';
 import { map } from 'rxjs';
-import { Book, BooksResponse } from './interface/book.model';
+import { Book } from './interface/book.model';
 import { DrawerBook } from './drawer/drawer-form';
 import { bookList } from '@/common/components/list';
 import { Dropdown, DropdownModule } from 'primeng/dropdown';
 
 @Component({
-    selector: 'books-container',
+    selector: 'debts-container',
     standalone: true,
     providers: [MessageService],
     template: ` <div class="grid grid-cols-12 gap-4 h-screen overflow-hidden">
         <div class="col-span-12 h-full">
             <div class="card max-md:rounded-b-none max-md:mb-0">
-                <page-header [title]="'Libros'">
+                <page-header [title]="'Deudas'">
                     <ng-template #actionsTemplate>
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
                             <p-dropdown [options]="pageOptions" [(ngModel)]="selectedPage" placeholder="Página Scraping" optionLabel="label" class="w-full sm:w-48"> </p-dropdown>
@@ -63,7 +63,7 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
             <div class="card h-[calc(100vh-12rem)] flex flex-col">
                 <p-toast />
                 <div class="flex-1 overflow-auto">
-                    <books-list [books]="books()" [cols]="cols" [hasContextualMenu]="true" (onSort)="onSort($event)" (menuClick)="handleMenuClick($event)">
+                    <debts-list [debts]="debts()" [cols]="cols" [hasContextualMenu]="true" (onSort)="onSort($event)" (menuClick)="handleMenuClick($event)">
                         <ng-template #listItem let-item let-first="first">
                             <div class="flex flex-col p-6 gap-4" [ngClass]="{ 'border-t border-surface-200 dark:border-surface-700': !first }">
                                 <div class="flex justify-between items-center flex-1 gap-6">
@@ -89,7 +89,7 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
                         <ng-template #menuTemplate>
                             <p-menu #menu [popup]="true" appendTo="body"></p-menu>
                         </ng-template>
-                    </books-list>
+                    </debts-list>
                 </div>
 
                 <div class="sticky bottom-0 bg-white dark:bg-surface-900">
@@ -101,7 +101,7 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
                     <ng-template #actionsTemplate>
                         <!-- <p-button label="Eliminar" severity="danger" [rounded]="true" class="flex-1" /> -->
                         <div class="w-full flex justify-end gap-5">
-                            <p-button label="Eliminar" [rounded]="true" (click)="confirmDeletebook(bookSelected())" severity="danger" />
+                            <p-button label="Eliminar" [rounded]="true" (click)="confirmDeletebook(debtselected())" severity="danger" />
                         </div>
                     </ng-template>
                 </drawer-book>
@@ -139,7 +139,7 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
         DropdownModule,
     ],
 })
-export class BooksContainer implements OnInit {
+export class DebtsContainer implements OnInit {
     searchInputStyles = {
         root: {
             borderRadius: '24px',
@@ -159,8 +159,8 @@ export class BooksContainer implements OnInit {
     drawerService = inject(DrawerService);
     drawerFactory = inject(DrawerFactory);
 
-    books = signal<Book[]>([]);
-    bookSelected = signal<Book>({} as Book);
+    debts = signal<Book[]>([]);
+    debtselected = signal<Book>({} as Book);
 
     pagination = signal({ currentPage: 1, pageSize: 10, totalItems: 10 });
     filters = signal([]);
@@ -169,17 +169,15 @@ export class BooksContainer implements OnInit {
 
     cols: Column[] = [
         { field: 'id', header: 'ID' },
-        { field: 'title', header: 'Titulo' },
-        { field: 'price', header: 'Precio' },
-        { field: 'rating', header: 'Rating' },
-        { field: 'stock', header: 'Stock' },
-        { field: 'category', header: 'Categoria' },
+        { field: 'description', header: 'Descripción' },
+        { field: 'amount', header: 'Monto' },
+        { field: 'isPaid', header: 'Estado' },
+        { field: 'createdAt', header: 'Fecha' },
     ];
-
-    selectedProducts: any[] = [];
+    
     bookToDelete = signal<any>(undefined);
     deletebookDialog = false;
-    deleteSelectedbooksDialog = false;
+    deleteSelecteddebtsDialog = false;
 
     pageOptions = Array.from({ length: 50 }, (_, i) => ({
         label: `Página ${i + 1}`,
@@ -202,28 +200,13 @@ export class BooksContainer implements OnInit {
             this.first = 1;
         }
 
-        this.debtsService
-            .getAll(this.qpService.queryParams())
-            .pipe(
-                map((data: BooksResponse) => {
-                    const books = data.items.map((item: Book) => ({
-                        id: item.id,
-                        title: item.title,
-                        price: item.price,
-                        rating: item.rating,
-                        stock: item.stock,
-                        category: item.category,
-                    }));
-                    return { items: books, pagination: data.pagination };
-                }),
-            )
-            .subscribe(
-                (data) => {
-                    this.books.set(data.items);
-                    this.pagination.set(data.pagination);
-                },
-                (error) => console.error(error),
-            );
+        this.debtsService.getAll(this.qpService.queryParams()).subscribe({
+            next: (data) => {
+                this.debts.set(data.items); 
+                this.pagination.set(data.pagination);
+            },
+            error: (error) => console.error(error),
+        });
     }
 
     getFilters() {
@@ -253,13 +236,13 @@ export class BooksContainer implements OnInit {
                     summary: 'Error',
                     detail: 'Ocurrió un error al obtener los libros',
                 });
-                console.error('Error scraping books:', error);
+                console.error('Error scraping debts:', error);
             },
         });
     }
 
     openBook(item: any) {
-        this.bookSelected.set(item);
+        this.debtselected.set(item);
         this.drawerFactory.openBookView(item);
     }
 

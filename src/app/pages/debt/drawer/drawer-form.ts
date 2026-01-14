@@ -23,7 +23,7 @@ import { ConfirmationModalService } from '@/common/services/confirmation-modal.s
 import { DrawerService } from '@/common/services/drawer.service';
 import { BaseDrawerComponent } from '@/common/components/base-drawer.component';
 import { ClientData } from '@/common/interfaces/drawer-configs';
-import { BooksService } from '../debts.service';
+import { DebtsService } from '../debts.service';
 
 @Component({
     selector: 'drawer-book',
@@ -121,7 +121,7 @@ export class DrawerBook extends BaseDrawerComponent<ClientData> {
 
     drawerService = inject(DrawerService);
     messageService = inject(MessageService);
-    booksService = inject(BooksService);
+    debtsService = inject(DebtsService);
     layoutService = inject(LayoutService);
     confirmationModalService = inject(ConfirmationModalService);
     fb = inject(FormBuilder);
@@ -180,7 +180,7 @@ export class DrawerBook extends BaseDrawerComponent<ClientData> {
             return;
         }
 
-        this.booksService.getBookById(bookId).subscribe({
+        this.debtsService.getBookById(bookId).subscribe({
             next: (data: any) => {
 
                 // ✅ Hacemos el patch con los datos recibidos

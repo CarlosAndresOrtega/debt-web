@@ -75,8 +75,7 @@ export class AuthService {
 
                 this._authenticated = true;
 
-                // 🚀 Redirige al módulo deseado
-                this._router.navigate(['/books']);
+                this._router.navigate(['/debts']);
 
                 return of(response);
             }),

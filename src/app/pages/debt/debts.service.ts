@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { Book, BooksResponse } from './interface/book.model';
+import { Book, debtsResponse } from './interface/book.model';
 
 @Injectable({
     providedIn: 'root',
@@ -15,21 +15,21 @@ export class DebtsService {
     /**
      * Retrieve clients with optional query parameters.
      */
-    getAll(queryparams?: Record<string, any>): Observable<BooksResponse> {
+    getAll(queryparams?: Record<string, any>): Observable<debtsResponse> {
         const httpParams = mapQueryParams(queryparams);
-        return this._http.get<BooksResponse>(`${environment.baseUrl}/books`, { params: httpParams });
+        return this._http.get<debtsResponse>(`${environment.baseUrl}/debts`, { params: httpParams });
     }
 
     getBookById(Id: any) {
-        return this._http.get(`${environment.baseUrl}/books/${Id}`);
+        return this._http.get(`${environment.baseUrl}/debts/${Id}`);
     }
 
     getFilters() {
-        return this._http.get(`${environment.baseUrl}/books/filters`);
+        return this._http.get(`${environment.baseUrl}/debts/filters`);
     }
 
     scraping(page: number): Observable<any> {
-    return this._http.get(`${environment.baseUrl}/books/scrape-books`, {
+    return this._http.get(`${environment.baseUrl}/debts/scrape-debts`, {
         params: {
             page: page.toString()
         },
@@ -41,7 +41,7 @@ export class DebtsService {
     }
 
     deleteBook(Id: number | undefined) {
-        return this._http.delete(`${environment.baseUrl}/books/${Id}`);
+        return this._http.delete(`${environment.baseUrl}/debts/${Id}`);
     }
 
     getAllInteractions(clientId: any) {

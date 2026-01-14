@@ -45,9 +45,9 @@ export class AppMenu {
         {
             items: [
                 {
-                    label: 'Libros',
+                    label: 'Deudas',
                     icon: 'pi pi-fw pi-users',
-                    routerLink: ['/books'],
+                    routerLink: ['/debts'],
                 }
             ],
         },

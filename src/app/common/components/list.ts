@@ -14,15 +14,15 @@ import { MenuModule } from 'primeng/menu';
 import { MenuItem, SortEvent } from 'primeng/api';
 
 @Component({
-    selector: 'books-list',
+    selector: 'debts-list',
     imports: [CommonModule, ButtonModule, TableModule, InputIconModule, IconFieldModule, FormsModule, TagModule, TooltipModule, DataViewModule, MenuModule],
     standalone: true,
     template: `
         <ng-container *ngIf="!layoutService.isMobile()">
             <p-table
                 #dt
-                [value]="books()"
-                [rows]="books().length"
+                [value]="debts()"
+                [rows]="debts().length"
                 [columns]="cols"
                 [tableStyle]="{ 'min-width': '75rem' }"
                 [rowHover]="true"
@@ -91,7 +91,7 @@ import { MenuItem, SortEvent } from 'primeng/api';
         </ng-container>
 
         <ng-container *ngIf="layoutService.isMobile()">
-            <p-dataview #dv [value]="books()" [rows]="books().length">
+            <p-dataview #dv [value]="debts()" [rows]="debts().length">
                 <ng-template #list let-items>
                     <div class="grid grid-cols-12 gap-4 grid-nogutter">
                         <div class="col-span-12" *ngFor="let item of items; let first = first">
@@ -113,7 +113,7 @@ export class bookList {
     @Input() showCheckbox = false;
     @Input() cols!: any;
 
-    books = input<any>([]);
+    debts = input<any>([]);
     pagination = input({ currentPage: 1, pageSize: 10, totalItems: 0 });
     hasContextualMenu = input(false);
     onSort = output();
