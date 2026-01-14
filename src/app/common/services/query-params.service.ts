@@ -133,18 +133,18 @@ export class QueryParamsService {
         return Object.keys(this._queryParams()).length === 0;
     }
 
-    prepareFilters(filtersData: any[]): any {
-        const queryParams = this.queryParams();
-
-        return filtersData.map((filter) => {
-            if (queryParams[filter.queryParam] !== undefined) {
-                filter.values.forEach((value: any) => {
-                    if (value.id.toString() === queryParams[filter.queryParam].toString()) {
-                        value.selected = true;
-                    }
-                });
-            }
-            return filter;
-        });
+    prepareFilters(filtersData: any[]): any[] {
+        if (!filtersData || !Array.isArray(filtersData)) return [];
+        
+        const currentParams = this.queryParams();
+    
+        return filtersData.map((f) => ({
+            ...f,
+            values: f.values?.map((val: any) => ({
+                ...val,
+                // Comprobación de selección robusta
+                selected: currentParams[f.queryParam]?.toString() === val.id?.toString()
+            })) || []
+        }));
     }
 }

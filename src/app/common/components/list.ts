@@ -19,72 +19,67 @@ import { MenuItem, SortEvent } from 'primeng/api';
     standalone: true,
     template: `
         <ng-container *ngIf="!layoutService.isMobile()">
-            <p-table
-                #dt
-                [value]="debts()"
-                [rows]="debts().length"
-                [columns]="cols"
-                [tableStyle]="{ 'min-width': '75rem' }"
-                [rowHover]="true"
-                [size]="'large'"
-                [resetPageOnSort]="false"
-                sortMode="multiple"
-                (onSort)="onSortHandler($event)"
-                [selection]="selectedRows()"
-                (selectionChange)="onSelectionChange($event)"
-            >
-                <ng-template #header>
+            <p-table #dt [value]="debts()" [columns]="cols" [rowHover]="true" [size]="'large'" styleClass="p-datatable-gridlines p-datatable-sm" responsiveLayout="scroll">
+                <ng-template #header let-columns>
                     <tr>
-                        @if (showCheckbox) {
-                            <th>
-                                <p-tableHeaderCheckbox />
-                            </th>
-                        }
-
-                        @for (col of cols; track $index) {
-                            <th class="whitespace-nowrap" pSortableColumn="{{ col.field }}">
+                        @for (col of columns; track col.field) {
+                            <th [pSortableColumn]="col.field" class="bg-surface-50 dark:bg-surface-900 py-3 text-sm uppercase">
                                 {{ col.header }}
-                                <p-sortIcon field="{{ col.field }}" />
+                                <p-sortIcon [field]="col.field" />
                             </th>
                         }
-                        <th *ngIf="hasContextualMenu()" class="bg-surface-0 dark:bg-surface-900 sticky right-0"></th>
+                        <th *ngIf="hasContextualMenu()" class="w-16 bg-surface-50 dark:bg-surface-900 sticky right-0"></th>
                     </tr>
                 </ng-template>
+
                 <ng-template #body let-rowData let-columns="columns">
-                    <tr>
-                        @if (showCheckbox) {
-                            <td>
-                                <p-tableCheckbox [value]="rowData" />
+                    <tr class="hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors">
+                        @for (col of columns; track col.field) {
+                            <td class="py-3">
+                                @if (col.customComponent === 'owner') {
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex flex-col">
+                                            <span class="font-semibold text-sm">{{ rowData.user?.firstName }} {{ rowData.user?.lastName }}</span>
+                                            <span class="text-xs text-surface-500">{{ rowData.user?.email }}</span>
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (!col.customComponent) {
+                                    <span class="text-surface-700 dark:text-surface-200 font-medium">{{ rowData[col.field] }}</span>
+                                }
+
+                                @if (col.customComponent === 'currency') {
+                                    <span class="font-bold text-base" [ngClass]="rowData.isPaid ? 'text-green-600' : 'text-orange-600'">
+                                        {{ rowData[col.field] | currency: 'USD' }}
+                                    </span>
+                                }
+
+                                @if (col.customComponent === 'status') {
+                                    <div class="flex flex-col gap-1">
+                                        <p-tag [severity]="rowData[col.field] ? 'success' : 'warn'" [value]="rowData[col.field] ? 'PAGADA' : 'PENDIENTE'" styleClass="!text-[9px] px-2"> </p-tag>
+                                    </div>
+                                }
+
+                                @if (col.customComponent === 'date') {
+                                    <span class="text-xs font-mono text-surface-600">
+                                        {{ rowData[col.field] | date: 'MMM d, y, h:mm a' }}
+                                    </span>
+                                }
                             </td>
                         }
-                        @for (col of columns; track $index) {
-                            @if (!col.customComponent) {
-                                <td class="truncate max-w-[20ch]" pTooltip="{{ rowData[col.field] }}" (click)="openItem.emit(rowData)" tooltipPosition="bottom">{{ rowData[col.field] }}</td>
-                            }
-                            @if (col.customComponent === 'tag') {
-                                <td>
-                                    <p-tag rounded="true" [value]="rowData[col.field]" styleClass="!py-2 !px-4 !rounded-full !font-medium"></p-tag>
-                                </td>
-                            }
-                            @if (col.customComponent === 'img') {
-                                <td>
-                                    <div class="w-12 h-12">
-                                        <img Class="h-full w-full object-contain" [src]="rowData[col.field]" alt="" />
-                                    </div>
-                                </td>
-                            }
-                            @if (col.customComponent === 'clickable') {
-                                <td class="truncate max-w-[20ch] cursor-pointer" pTooltip="{{ rowData[col.field] }}" (click)="openItem.emit(rowData[col.field])" tooltipPosition="bottom">{{ rowData[col.field] }}</td>
-                            }
+
+                        @if (hasContextualMenu()) {
+                            <td class="bg-surface-0 dark:bg-surface-900 sticky right-0 z-10 text-center py-3 border-l border-surface-200 dark:border-surface-700">
+                                <div class="flex justify-center">
+                                    <button pButton type="button" icon="pi pi-ellipsis-v" class="p-button-rounded p-button-text p-button-plain" (click)="onMenuToggle($event, rowData)"></button>
+                                </div>
+
+                                <ng-container *ngIf="menuTemplate">
+                                    <ng-container *ngTemplateOutlet="menuTemplate; context: { $implicit: rowData }"></ng-container>
+                                </ng-container>
+                            </td>
                         }
-                        <td *ngIf="hasContextualMenu()" class="bg-surface-0 dark:bg-surface-900 sticky right-0 hover:bg-[#f1f5f9] dark:hover:bg-[#27272a]">
-                            <div class="flex justify-center">
-                                <button pButton type="button" icon="pi pi-ellipsis-h" class="p-button-rounded p-button-text p-button-plain cursor-pointer" (click)="onMenuToggle($event, rowData)"></button>
-                            </div>
-                            <ng-container *ngIf="menuTemplate">
-                                <ng-container *ngTemplateOutlet="menuTemplate; context: { $implicit: rowData }"></ng-container>
-                            </ng-container>
-                        </td>
                     </tr>
                 </ng-template>
             </p-table>
@@ -103,7 +98,7 @@ import { MenuItem, SortEvent } from 'primeng/api';
         </ng-container>
     `,
 })
-export class bookList {
+export class debtList {
     @ContentChild('listItem') customItemTemplate!: TemplateRef<any>;
     @ContentChild('menuTemplate') menuTemplate!: TemplateRef<any>;
     isSorted: boolean = false;

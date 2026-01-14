@@ -13,7 +13,6 @@ import { CommonModule } from '@angular/common';
         <div class="layout-rightmenu h-full overflow-y-auto overflow-x-hidden">
             <div class="flex flex-col items-center" style="padding: 4.5rem 0 2rem 0">
                 <div class="flex flex-col items-center mb-6">
-                    <img src="/images/ecommerce-dashboard/gene.png" alt="atlantis" class="user-image" />
                     <span class="user-name text-2xl text-center block mt-6 mb-1">Gene Russell</span>
                     <span class="user-number">(406) 555-0120</span>
                 </div>

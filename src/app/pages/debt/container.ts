@@ -34,24 +34,22 @@ import { ConfirmationModalService } from '@/common/services/confirmation-modal.s
 import { DrawerService } from '@/common/services/drawer.service';
 import { DrawerFactory } from '@/common/services/drawer-factory.service';
 import { DebtsService } from './debts.service';
-import { map } from 'rxjs';
 import { Book } from './interface/book.model';
-import { DrawerBook } from './drawer/drawer-form';
-import { bookList } from '@/common/components/list';
+import { DrawerDebt } from './drawer/drawer-form';
+import { debtList } from '@/common/components/list';
 import { Dropdown, DropdownModule } from 'primeng/dropdown';
 
 @Component({
     selector: 'debts-container',
     standalone: true,
     providers: [MessageService],
-    template: ` <div class="grid grid-cols-12 gap-4 h-screen overflow-hidden">
+    template: `<div class="grid grid-cols-12 gap-4 h-screen overflow-hidden">
         <div class="col-span-12 h-full">
             <div class="card max-md:rounded-b-none max-md:mb-0">
                 <page-header [title]="'Deudas'">
                     <ng-template #actionsTemplate>
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-                            <p-dropdown [options]="pageOptions" [(ngModel)]="selectedPage" placeholder="Página Scraping" optionLabel="label" class="w-full sm:w-48"> </p-dropdown>
-                            <p-button label="Scraping Manual" rounded="true" styleClass="p-button-primary !text-white w-full sm:w-auto" (onClick)="openScraping()"> </p-button>
+                            <p-button label="Nueva Deuda" icon="pi pi-plus" rounded="true" styleClass="p-button-primary !bg-orange-500 !border-orange-500 !text-white w-full sm:w-auto" (onClick)="openCreateDebt()"> </p-button>
                         </div>
                     </ng-template>
 
@@ -60,6 +58,7 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
                     </ng-template>
                 </page-header>
             </div>
+
             <div class="card h-[calc(100vh-12rem)] flex flex-col">
                 <p-toast />
                 <div class="flex-1 overflow-auto">
@@ -67,20 +66,22 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
                         <ng-template #listItem let-item let-first="first">
                             <div class="flex flex-col p-6 gap-4" [ngClass]="{ 'border-t border-surface-200 dark:border-surface-700': !first }">
                                 <div class="flex justify-between items-center flex-1 gap-6">
-                                    <div class="flex flex-row md:flex-col justify-between items-start gap-2">
-                                        <div class="flex flex-col gap-1 max-w-[80%] break-words">
-                                            <span class="font-medium text-secondary text-lg">{{ item.title }}</span>
-                                            <div class="text-lg font-medium text-surface-900 dark:text-surface-0 mt-2">£{{ item.price }}</div>
-                                        </div>
+                                    <div class="flex flex-col justify-between items-start gap-1">
+                                        <span class="font-medium text-secondary text-lg">{{ item.description }}</span>
+                                        <span class="text-sm text-surface-500 italic">{{ item.createdAt | date: 'short' }}</span>
                                     </div>
-                                    <div class="flex items-end justify-end gap-1">
-                                        <div class="text-lg font-medium text-surface-900 dark:text-surface-0 mt-2 text-right max-w-[80%] break-words">
-                                            {{ item.category }}
+
+                                    <div class="flex items-center gap-6">
+                                        <div class="flex flex-col items-end gap-1">
+                                            <span class="text-lg font-bold" [ngClass]="item.isPaid ? 'text-green-500' : 'text-orange-500'">
+                                                {{ item.amount | currency }}
+                                            </span>
+                                            <p-tag [severity]="item.isPaid ? 'success' : 'warn'" [value]="item.isPaid ? 'Pagada' : 'Pendiente'"></p-tag>
                                         </div>
-                                        <button type="button" class="text-surface-500 dark:text-surface-300" (click)="openBook(item)">
-                                            <i class="pi pi-chevron-right"></i>
+
+                                        <button type="button" class="text-surface-500 dark:text-surface-300" (click)="openDebt(item)">
+                                            <i class="pi pi-chevron-right text-xl"></i>
                                         </button>
-                                        <!-- [severity]="item.estadoCliente | statusPipe" -->
                                     </div>
                                 </div>
                             </div>
@@ -96,20 +97,18 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
                     <p-paginator (onPageChange)="onPageChange($event)" [first]="first" [rows]="pagination().pageSize" [totalRecords]="pagination().totalItems" [rowsPerPageOptions]="[10, 20, 30]" />
                 </div>
 
-                <!-- Drawer Form Component -->
-                <drawer-book [key]="'book-drawer'">
+                <drawer-debt [key]="'debt-drawer'">
                     <ng-template #actionsTemplate>
-                        <!-- <p-button label="Eliminar" severity="danger" [rounded]="true" class="flex-1" /> -->
                         <div class="w-full flex justify-end gap-5">
                             <p-button label="Eliminar" [rounded]="true" (click)="confirmDeletebook(debtselected())" severity="danger" />
                         </div>
                     </ng-template>
-                </drawer-book>
+                </drawer-debt>
             </div>
         </div>
     </div>`,
     imports: [
-        bookList,
+        debtList,
         CommonModule,
         ButtonModule,
         TableModule,
@@ -131,7 +130,7 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
         InputGroupModule,
         InputGroupAddonModule,
         TimelineModule,
-        DrawerBook,
+        DrawerDebt,
         PaginatorModule,
         FilterGroup,
         PageHeader,
@@ -162,19 +161,19 @@ export class DebtsContainer implements OnInit {
     debts = signal<Book[]>([]);
     debtselected = signal<Book>({} as Book);
 
-    pagination = signal({ currentPage: 1, pageSize: 10, totalItems: 10 });
-    filters = signal([]);
+    pagination = signal({ currentPage: 1, pageSize: 10, totalItems: 0 });
+    filters = signal<any[]>([]);
 
     first: number = 0;
 
-    cols: Column[] = [
-        { field: 'id', header: 'ID' },
+    cols = [
         { field: 'description', header: 'Descripción' },
-        { field: 'amount', header: 'Monto' },
-        { field: 'isPaid', header: 'Estado' },
-        { field: 'createdAt', header: 'Fecha' },
+        { field: 'amount', header: 'Monto', customComponent: 'currency' },
+        { field: 'user', header: 'Dueño', customComponent: 'owner' },
+        { field: 'isPaid', header: 'Estado', customComponent: 'status' },
+        { field: 'createdAt', header: 'Fecha Registro', customComponent: 'date' },
     ];
-    
+
     bookToDelete = signal<any>(undefined);
     deletebookDialog = false;
     deleteSelecteddebtsDialog = false;
@@ -202,7 +201,7 @@ export class DebtsContainer implements OnInit {
 
         this.debtsService.getAll(this.qpService.queryParams()).subscribe({
             next: (data) => {
-                this.debts.set(data.items); 
+                this.debts.set(data.items);
                 this.pagination.set(data.pagination);
             },
             error: (error) => console.error(error),
@@ -212,38 +211,42 @@ export class DebtsContainer implements OnInit {
     getFilters() {
         this.debtsService.getFilters().subscribe({
             next: (data: any) => {
-                const preparedFilters = this.qpService.prepareFilters(data.filters);
-                this.filters.set(preparedFilters);
+                const rawFilters = data?.filters || data;
+
+                if (rawFilters && Array.isArray(rawFilters)) {
+                    const preparedFilters = this.qpService.prepareFilters(rawFilters);
+                    this.filters.set(preparedFilters);
+                }
             },
-            error: (error) => console.error(error),
+            error: (error) => console.error('Error al obtener filtros:', error),
         });
     }
 
     openScraping() {
-        this.debtsService.scraping(this.selectedPage).subscribe({
-            next: () => {
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Obtención exitosa',
-                    detail: 'Se obtuvo correctamente los libros',
-                });
-                this.getData();
-                this.getFilters();
-            },
-            error: (error) => {
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Ocurrió un error al obtener los libros',
-                });
-                console.error('Error scraping debts:', error);
-            },
-        });
+        // this.debtsService.scraping(this.selectedPage).subscribe({
+        //     next: () => {
+        //         this.messageService.add({
+        //             severity: 'success',
+        //             summary: 'Obtención exitosa',
+        //             detail: 'Se obtuvo correctamente los libros',
+        //         });
+        //         this.getData();
+        //         this.getFilters();
+        //     },
+        //     error: (error) => {
+        //         this.messageService.add({
+        //             severity: 'error',
+        //             summary: 'Error',
+        //             detail: 'Ocurrió un error al obtener los libros',
+        //         });
+        //         console.error('Error scraping debts:', error);
+        //     },
+        // });
     }
 
     openBook(item: any) {
         this.debtselected.set(item);
-        this.drawerFactory.openBookView(item);
+        // this.drawerFactory.openBookView(item);
     }
 
     confirmDeletebook(book: any) {
@@ -267,26 +270,26 @@ export class DebtsContainer implements OnInit {
     deleteSingleBook() {
         if (!this.bookToDelete()) return;
 
-        this.debtsService.deleteBook(this.bookToDelete().id).subscribe({
-            next: () => {
-                this.drawerService.close('book-drawer');
+        // this.debtsService.deleteBook(this.bookToDelete().id).subscribe({
+        //     next: () => {
+        //         this.drawerService.close('book-drawer');
 
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Eliminado',
-                    detail: 'Libro eliminado con éxito',
-                });
-                this.getData();
-            },
-            error: (error) => {
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Ocurrió un error al eliminar el libro',
-                });
-                console.error('Error deleting book:', error);
-            },
-        });
+        //         this.messageService.add({
+        //             severity: 'success',
+        //             summary: 'Eliminado',
+        //             detail: 'Libro eliminado con éxito',
+        //         });
+        //         this.getData();
+        //     },
+        //     error: (error) => {
+        //         this.messageService.add({
+        //             severity: 'error',
+        //             summary: 'Error',
+        //             detail: 'Ocurrió un error al eliminar el libro',
+        //         });
+        //         console.error('Error deleting book:', error);
+        //     },
+        // });
     }
 
     async onPageChange(event: PaginatorState) {
@@ -301,37 +304,50 @@ export class DebtsContainer implements OnInit {
     }
 
     async onFilterSelect(filter: any) {
-        if (filter.queryParam === 'dateRange') {
-            if (!filter.selectedItem) {
-                await this.qpService.removeParams(['dateFrom', 'dateTo']);
-            } else {
-                await this.qpService.updateParams({
-                    dateFrom: filter.selectedItem.dateFrom,
-                    dateTo: filter.selectedItem.dateTo,
-                });
-            }
-        } else if (filter.queryParam === 'price') {
-            if (!filter.selectedItem) {
-                await this.qpService.removeParams(['priceMin', 'priceMax']);
-            } else {
-                const [min, max] = filter.selectedItem;
-                await this.qpService.updateParams({
-                    priceMin: min,
-                    priceMax: max,
-                });
-            }
+        if (!filter.selectedItem) {
+            await this.qpService.removeParams([filter.queryParam]);
         } else {
-            if (!filter.selectedItem) {
-                await this.qpService.removeParams([filter.queryParam]);
-            } else {
-                await this.qpService.updateParams({
-                    [filter.queryParam]: filter.selectedItem.name,
-                });
-            }
+            const valueToApply = filter.selectedItem.id;
+            
+            await this.qpService.updateParams({
+                [filter.queryParam]: valueToApply,
+                page: 1 
+            });
         }
-        await this.qpService.updateParams({ page: 1 });
         this.getData();
     }
+    // async onFilterSelect(filter: any) {
+    //     if (filter.queryParam === 'dateRange') {
+    //         if (!filter.selectedItem) {
+    //             await this.qpService.removeParams(['dateFrom', 'dateTo']);
+    //         } else {
+    //             await this.qpService.updateParams({
+    //                 dateFrom: filter.selectedItem.dateFrom,
+    //                 dateTo: filter.selectedItem.dateTo,
+    //             });
+    //         }
+    //     } else if (filter.queryParam === 'price') {
+    //         if (!filter.selectedItem) {
+    //             await this.qpService.removeParams(['priceMin', 'priceMax']);
+    //         } else {
+    //             const [min, max] = filter.selectedItem;
+    //             await this.qpService.updateParams({
+    //                 priceMin: min,
+    //                 priceMax: max,
+    //             });
+    //         }
+    //     } else {
+    //         if (!filter.selectedItem) {
+    //             await this.qpService.removeParams([filter.queryParam]);
+    //         } else {
+    //             await this.qpService.updateParams({
+    //                 [filter.queryParam]: filter.selectedItem.name,
+    //             });
+    //         }
+    //     }
+    //     await this.qpService.updateParams({ page: 1 });
+    //     this.getData();
+    // }
 
     async onClearFilters() {
         const standardFilterParams = this.filters().flatMap((filter: any) => {
@@ -347,15 +363,48 @@ export class DebtsContainer implements OnInit {
         this.getData();
     }
 
+    openCreateDebt() {
+        this.debtselected.set({} as any); // Limpiamos selección
+        this.drawerFactory.openDebtForm(null); // Llamamos al factory para crear
+    }
+
+    // Detalle al hacer click en la flecha o el menú
+    openDebt(item: any) {
+        this.debtselected.set(item);
+        this.drawerFactory.openDebtView(item); // Modo lectura/edición
+    }
+
+    markAsPaid(item: any) {
+        if (item.isPaid) return;
+
+        this.debtsService.markAsPaid(item.id).subscribe({
+            next: () => {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Pagada',
+                    detail: 'La deuda se marcó como pagada',
+                });
+                this.getData(); // Refrescar lista
+            },
+            error: (err) => console.error(err),
+        });
+    }
+
     handleMenuClick(event: { event: Event; item: any }) {
         const menuItems = [
             {
-                label: 'Detalle Libro',
+                label: 'Ver Detalle',
                 icon: 'pi pi-eye',
-                command: () => this.openBook(event.item),
+                command: () => this.openDebt(event.item),
             },
             {
-                label: 'Eliminar Libro',
+                label: 'Marcar como Pagada',
+                icon: 'pi pi-check',
+                visible: !event.item.isPaid, // Solo si está pendiente
+                command: () => this.markAsPaid(event.item),
+            },
+            {
+                label: 'Eliminar',
                 icon: 'pi pi-trash',
                 command: () => this.confirmDeletebook(event.item),
             },
