@@ -26,7 +26,7 @@ export const authInterceptor = (req: HttpRequest<unknown>, next: HttpHandlerFn):
             if (error.status === 401 && !req.url.endsWith('/auth/refresh')) {
                 return handle401Error(req, next, authService, router, error);
             }
-            return throwError(() => new Error(error.message));
+            return throwError(() => error); 
         }),
     );
 };
