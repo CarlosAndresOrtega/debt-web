@@ -32,6 +32,9 @@ export class AuthService {
     set refreshToken(token: string) {
         localStorage.setItem('refreshToken', token);
     }
+    set user(user: any) {
+        localStorage.setItem('user', JSON.stringify(user));
+    }
 
     get accessToken(): string {
         return localStorage.getItem('accessToken') ?? '';
@@ -45,12 +48,25 @@ export class AuthService {
     get verifyResponse$(): Observable<any> {
         return this._verifyResponse.asObservable();
     }
+    get user(): any {
+        const user = localStorage.getItem('user');
+        if (!user || user === 'undefined') {
+            return null;
+        }
+        try {
+            return JSON.parse(user);
+        } catch (e) {
+            return null;
+        }
+    }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-   
+    getCurrentUserId(): string {
+        return this.user?.userId || '';
+    }
 
     /**
      * Sign in
@@ -69,6 +85,7 @@ export class AuthService {
             switchMap((response: any) => {
                 this.accessToken = response.access_token; 
                 this.refreshToken = response.refresh_token ?? null;
+                this.user = response.user;
                 this.sesssionId = uuidv4();
 
                 localStorage.setItem('accessToken', this.accessToken);
@@ -127,6 +144,7 @@ export class AuthService {
         // Remove the access token from the local storage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         localStorage.removeItem('user-roles');
         localStorage.removeItem('user-permissions');
         localStorage.removeItem('sessionId');

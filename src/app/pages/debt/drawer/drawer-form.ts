@@ -12,32 +12,19 @@ import { TagModule } from 'primeng/tag';
 import { DrawerService } from '@/common/services/drawer.service';
 import { BaseDrawerComponent } from '@/common/components/base-drawer.component';
 import { DebtsService } from '../debts.service';
+import { AuthService } from '@/pages/auth/auth.service';
 
 @Component({
     selector: 'drawer-debt', // Selector limpio
     standalone: true,
-    imports: [
-        CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, 
-        InputGroupModule, InputGroupAddonModule, DrawerModule, 
-        ButtonModule, ToastModule, TagModule
-    ],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, InputGroupModule, InputGroupAddonModule, DrawerModule, ButtonModule, ToastModule, TagModule],
     template: `
-        <p-drawer 
-            [visible]="isDrawerVisible()" 
-            position="right" 
-            [header]="getDrawerState().title()" 
-            [modal]="true" 
-            styleClass="!w-full md:!w-80 lg:!w-[30rem]" 
-            (onHide)="onClose()">
-            
+        <p-drawer [visible]="isDrawerVisible()" position="right" [header]="getDrawerState().title()" [modal]="true" styleClass="!w-full md:!w-80 lg:!w-[30rem]" (onHide)="onClose()">
             <ng-template #content>
                 <form class="flex flex-col gap-6 p-4" *ngIf="formGroup" [formGroup]="formGroup">
                     <div *ngIf="isEditMode()" class="flex justify-between items-center bg-surface-50 dark:bg-surface-800 p-3 rounded-lg">
                         <span class="text-sm font-medium">Estado actual:</span>
-                        <p-tag 
-                            [severity]="formGroup.get('isPaid')?.value ? 'success' : 'warn'" 
-                            [value]="formGroup.get('isPaid')?.value ? 'PAGADA' : 'PENDIENTE'">
-                        </p-tag>
+                        <p-tag [severity]="formGroup.get('isPaid')?.value ? 'success' : 'warn'" [value]="formGroup.get('isPaid')?.value ? 'PAGADA' : 'PENDIENTE'"> </p-tag>
                     </div>
 
                     <div class="flex flex-col gap-2">
@@ -51,9 +38,7 @@ import { DebtsService } from '../debts.service';
                             <p-inputGroupAddon>$</p-inputGroupAddon>
                             <input pInputText id="amount" formControlName="amount" type="number" placeholder="0.00" />
                         </p-inputGroup>
-                        <small class="text-red-500" *ngIf="formGroup.get('amount')?.invalid && formGroup.get('amount')?.dirty">
-                            El monto debe ser un valor positivo mayor a 0.
-                        </small>
+                        <small class="text-red-500" *ngIf="formGroup.get('amount')?.invalid && formGroup.get('amount')?.dirty"> El monto debe ser un valor positivo mayor a 0. </small>
                     </div>
 
                     <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg" *ngIf="formGroup.disabled">
@@ -68,19 +53,13 @@ import { DebtsService } from '../debts.service';
             <ng-template #footer>
                 <div class="flex gap-4 w-full">
                     <p-button label="Descartar" [rounded]="true" (click)="onClose()" severity="secondary" class="flex-1" />
-                    
+
                     <ng-container *ngIf="isEditMode(); else createBtn">
-                         <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
+                        <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
                     </ng-container>
 
                     <ng-template #createBtn>
-                        <p-button 
-                            label="Guardar Deuda" 
-                            [rounded]="true" 
-                            styleClass="!bg-orange-500 !border-orange-500"
-                            class="flex-1" 
-                            [disabled]="formGroup.invalid"
-                            (onClick)="saveDebt()" />
+                        <p-button label="Guardar Deuda" [rounded]="true" styleClass="!bg-orange-500 !border-orange-500" class="flex-1" [disabled]="formGroup.invalid" (onClick)="saveDebt()" />
                     </ng-template>
                 </div>
             </ng-template>
@@ -93,6 +72,7 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
     drawerService = inject(DrawerService);
     messageService = inject(MessageService);
     debtsService = inject(DebtsService);
+    authService = inject(AuthService);
     fb = inject(FormBuilder);
 
     formGroup!: FormGroup;
@@ -119,7 +99,7 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
             id: [null],
             description: ['', [Validators.required, Validators.minLength(3)]],
             amount: [null, [Validators.required, Validators.min(0.01)]], // Validación de monto positivo
-            isPaid: [false]
+            isPaid: [false],
         });
     }
 
@@ -147,24 +127,40 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
                     this.formGroup.enable();
                 }
             },
-            error: (err) => console.error('Error al cargar la deuda:', err)
+            error: (err) => console.error('Error al cargar la deuda:', err),
         });
     }
 
     saveDebt() {
         if (this.formGroup.invalid) return;
-        
-        const payload = this.formGroup.getRawValue();
-        this.debtsService.createDebt(payload).subscribe({
+
+        const rawValue = this.formGroup.getRawValue();
+
+        if (!rawValue.id) {
+            delete rawValue.id;
+        }
+        const payload = {
+            ...rawValue,
+            userId: this.authService.getCurrentUserId(),
+        };
+
+        const request = payload.id ? this.debtsService.updateDebt(payload.id, payload) : this.debtsService.createDebt(payload);
+
+        request.subscribe({
             next: () => {
-                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Deuda registrada correctamente' });
+                this.messageService.add({ severity: 'success', detail: 'Deuda registrada correctamente' });
                 this.onClose();
-                // Aquí deberías refrescar la tabla en el container
             },
-            error: (err) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error.message })
+            error: (err) => {
+                this.messageService.add({ severity: 'error', detail: err.error.message || 'Error al guardar' });
+            },
         });
     }
 
-    protected override validateForm(): boolean { return this.formGroup?.valid; }
-    protected override getFormData(): any { return this.formGroup?.getRawValue(); }
+    protected override validateForm(): boolean {
+        return this.formGroup?.valid;
+    }
+    protected override getFormData(): any {
+        return this.formGroup?.getRawValue();
+    }
 }

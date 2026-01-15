@@ -29,18 +29,18 @@ export class DebtsService {
     }
 
     updateDebt(id: any, payload: any): Observable<any> {
-        return this._http.put(`${environment.baseUrl}/debts/${id}`, payload);
+        return this._http.patch(`${environment.baseUrl}/debts/${id}`, payload);
     }
 
-    markAsPaid(id: number): Observable<any> {
-        return this._http.patch(`${environment.baseUrl}/debts/${id}/pay`, {});
+    markAsPaid(id: string, paidByUserId: string): Observable<any> {
+        return this._http.patch(`${environment.baseUrl}/${id}/pay`, { userId: paidByUserId });
     }
 
     getStats(): Observable<any> {
         return this._http.get(`${environment.baseUrl}/debts/stats`);
     }
-
-    deleteDebt(id: number): Observable<any> {
-        return this._http.delete(`${environment.baseUrl}/debts/${id}`);
+    
+    delete(id: string): Observable<any> {
+        return this._http.delete(`${environment.baseUrl}/${id}`);
     }
 }
