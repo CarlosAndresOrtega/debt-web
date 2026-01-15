@@ -45,6 +45,11 @@ export class AppMenu {
         {
             items: [
                 {
+                    label: 'Dashboard',
+                    icon: 'pi pi-fw pi-th-large',
+                    routerLink: ['/dashboard'],
+                },
+                {
                     label: 'Deudas',
                     icon: 'pi pi-fw pi-users',
                     routerLink: ['/debts'],
