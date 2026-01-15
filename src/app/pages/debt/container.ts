@@ -71,6 +71,17 @@ import { AuthService } from '../auth/auth.service';
                                     <div class="flex flex-col justify-between items-start gap-1">
                                         <span class="font-medium text-secondary text-lg">{{ item.description }}</span>
                                         <span class="text-sm text-surface-500 italic">{{ item.createdAt | date: 'short' }}</span>
+                                        <div class="flex items-center gap-1.5 text-sm text-surface-600">
+                                            <span class="font-semibold text-xs uppercase tracking-wider text-surface-400">Dueño:</span>
+                                            <span>{{ item.user?.firstName }} {{ item.user?.lastName }}</span>
+                                        </div>
+
+                                        @if (item.isPaid && item.paidByUser) {
+                                            <div class="flex items-center gap-1.5 text-sm text-green-600 mt-0.5">
+                                                <span class="font-semibold text-xs uppercase tracking-wider text-green-400">Pagado por:</span>
+                                                <span class="font-medium">{{ item.paidByUser?.firstName }} {{ item.paidByUser?.lastName }}</span>
+                                            </div>
+                                        }
                                     </div>
 
                                     <div class="flex items-center gap-6">
@@ -81,7 +92,7 @@ import { AuthService } from '../auth/auth.service';
                                             <p-tag [severity]="item.isPaid ? 'success' : 'warn'" [value]="item.isPaid ? 'Pagada' : 'Pendiente'"></p-tag>
                                         </div>
 
-                                        <button type="button" (click)="openDebt(item)">
+                                        <button type="button" (click)="handleMenuClick({ event: $event, item: item })">
                                             <i class="pi pi-chevron-right text-xl"></i>
                                         </button>
                                     </div>
@@ -94,6 +105,8 @@ import { AuthService } from '../auth/auth.service';
                         </ng-template>
                     </debts-list>
                 </div>
+
+                <p-menu #responsiveMenu [popup]="true" appendTo="body"></p-menu>
 
                 <div class="sticky bottom-0 bg-white dark:bg-surface-900">
                     <p-paginator (onPageChange)="onPageChange($event)" [first]="first" [rows]="pagination().pageSize" [totalRecords]="pagination().totalItems" [rowsPerPageOptions]="[10, 20, 30]" />
@@ -149,6 +162,7 @@ export class DebtsContainer implements OnInit {
 
     @ViewChild('dt') dt!: Table;
     @ViewChild('menu') menu!: Menu;
+    @ViewChild('responsiveMenu') responsiveMenu!: Menu;
 
     layoutService = inject(LayoutService);
     debtsService = inject(DebtsService);
@@ -434,43 +448,25 @@ export class DebtsContainer implements OnInit {
     }
 
     handleMenuClick(event: { event: Event; item: any }) {
+        // Usamos el menú gemelo que SÍ está en el DOM del padre
+        if (!this.responsiveMenu) return;
+
         const isPaid = event.item.isPaid;
-        let allItems = [];
+        let allItems: MenuItem[] = [];
+
+        // Tu lógica original intacta
         if (!isPaid) {
             allItems = [
-                {
-                    label: 'Editar',
-                    icon: 'pi pi-pencil',
-                    visible: !isPaid,
-                    command: () => this.openEditDebt(event.item),
-                },
-                {
-                    label: 'Marcar como Pagada',
-                    icon: 'pi pi-check',
-                    visible: !isPaid,
-                    styleClass: 'text-green-500',
-                    command: () => this.markAsPaid(event.item),
-                },
-                {
-                    label: 'Eliminar',
-                    icon: 'pi pi-trash',
-                    visible: !isPaid,
-                    styleClass: 'text-red-500',
-                    command: () => this.confirmDeleteDebt(event.item),
-                },
+                { label: 'Editar', icon: 'pi pi-pencil', command: () => this.openEditDebt(event.item) },
+                { label: 'Marcar como Pagada', icon: 'pi pi-check', styleClass: 'text-green-500', command: () => this.markAsPaid(event.item) },
+                { label: 'Eliminar', icon: 'pi pi-trash', styleClass: 'text-red-500', command: () => this.confirmDeleteDebt(event.item) },
             ];
         } else {
-            allItems = [
-                {
-                    label: 'Ver Detalle',
-                    icon: 'pi pi-eye',
-                    command: () => this.openDebt(event.item),
-                },
-            ];
+            allItems = [{ label: 'Ver Detalle', icon: 'pi pi-eye', command: () => this.openDebt(event.item) }];
         }
 
-        this.menu.model = allItems;
-        this.menu.toggle(event.event);
+        this.responsiveMenu.model = allItems;
+        this.responsiveMenu.toggle(event.event);
     }
     downloadCsv() {
         this.debtsService.exportCsv(this.qpService.queryParams()).subscribe({

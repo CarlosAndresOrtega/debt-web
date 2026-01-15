@@ -15,14 +15,14 @@ import { DebtsService } from '../debts.service';
 import { AuthService } from '@/pages/auth/auth.service';
 
 @Component({
-    selector: 'drawer-debt', 
+    selector: 'drawer-debt',
     standalone: true,
     imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, InputGroupModule, InputGroupAddonModule, DrawerModule, ButtonModule, ToastModule, TagModule],
     template: `
         <p-drawer [visible]="isDrawerVisible()" position="right" [header]="getDrawerState().title()" [modal]="true" styleClass="!w-full md:!w-80 lg:!w-[30rem]" (onHide)="onClose()">
             <ng-template #content>
                 <form class="flex flex-col gap-6 p-4" *ngIf="formGroup" [formGroup]="formGroup">
-                    <div *ngIf="isEditMode()" class="flex justify-between items-center bg-surface-50 dark:bg-surface-800 p-3 rounded-lg">
+                    <div *ngIf="isEditMode()" class="flex justify-between items-center ...">
                         <span class="text-sm font-medium">Estado actual:</span>
                         <p-tag [severity]="formGroup.get('isPaid')?.value ? 'success' : 'warn'" [value]="formGroup.get('isPaid')?.value ? 'PAGADA' : 'PENDIENTE'"> </p-tag>
                     </div>
@@ -138,7 +138,7 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         if (this.formGroup.invalid) return;
 
         const rawValue = this.formGroup.getRawValue();
-        const id = rawValue.id; 
+        const id = rawValue.id;
 
         const payload = {
             ...rawValue,
