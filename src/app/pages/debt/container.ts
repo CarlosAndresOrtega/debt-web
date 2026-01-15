@@ -50,6 +50,7 @@ import { AuthService } from '../auth/auth.service';
                 <page-header [title]="'Deudas'">
                     <ng-template #actionsTemplate>
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                            <p-button label="Exportar CSV" icon="pi pi-file-excel" rounded="true" severity="secondary" (onClick)="downloadCsv()" />
                             <p-button label="Nueva Deuda" icon="pi pi-plus" rounded="true" styleClass="p-button-primary !bg-orange-500 !border-orange-500 !text-white w-full sm:w-auto" (onClick)="openCreateDebt()"> </p-button>
                         </div>
                     </ng-template>
@@ -293,7 +294,7 @@ export class DebtsContainer implements OnInit {
     }
 
     confirmDeleteDebt(item: any) {
-        this.bookToDelete.set(item); 
+        this.bookToDelete.set(item);
         this.confirmationModalService
             .confirm({
                 header: 'Confirmar Eliminación',
@@ -470,5 +471,18 @@ export class DebtsContainer implements OnInit {
 
         this.menu.model = allItems;
         this.menu.toggle(event.event);
+    }
+    downloadCsv() {
+        this.debtsService.exportCsv(this.qpService.queryParams()).subscribe({
+            next: (blob) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reporte_deudas_${Date.now()}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            },
+            error: () => this.messageService.add({ severity: 'error', detail: 'Error al exportar' }),
+        });
     }
 }

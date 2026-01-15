@@ -43,4 +43,10 @@ export class DebtsService {
     delete(id: string): Observable<any> {
         return this._http.delete(`${environment.baseUrl}/debts/${id}`);
     }
+    exportCsv(params: any): Observable<Blob> {
+        return this._http.get(`${environment.baseUrl}/debts/export/csv`, {
+            params,
+            responseType: 'blob',
+        });
+    }
 }
