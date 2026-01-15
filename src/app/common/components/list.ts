@@ -44,7 +44,18 @@ import { MenuItem, SortEvent } from 'primeng/api';
                                         </div>
                                     </div>
                                 }
-
+                                @if (col.customComponent === 'payer') {
+                                    <div class="flex flex-col">
+                                        @if (rowData.paidByUser) {
+                                            <span class="font-medium text-surface-900 dark:text-surface-0"> {{ rowData.paidByUser.firstName }} {{ rowData.paidByUser.lastName }} </span>
+                                            <span class="text-xs text-surface-500 italic">
+                                                {{ rowData.paidByUser.email }}
+                                            </span>
+                                        } @else {
+                                            <span class="text-surface-400 italic text-sm">Pendiente</span>
+                                        }
+                                    </div>
+                                }
                                 @if (!col.customComponent) {
                                     <span class="text-surface-700 dark:text-surface-200 font-medium">{{ rowData[col.field] }}</span>
                                 }
@@ -57,7 +68,7 @@ import { MenuItem, SortEvent } from 'primeng/api';
 
                                 @if (col.customComponent === 'status') {
                                     <div class="flex flex-col gap-1">
-                                        <p-tag [severity]="rowData[col.field] ? 'success' : 'warn'" [value]="rowData[col.field] ? 'PAGADA' : 'PENDIENTE'" styleClass="!text-[9px] px-2"> </p-tag>
+                                        <p-tag [severity]="rowData.isPaid === true || rowData.isPaid === 'true' ? 'success' : 'warn'" [value]="rowData.isPaid === true || rowData.isPaid === 'true' ? 'PAGADA' : 'PENDIENTE'"> </p-tag>
                                     </div>
                                 }
 

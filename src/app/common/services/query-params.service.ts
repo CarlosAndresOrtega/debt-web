@@ -19,7 +19,7 @@ export class QueryParamsService {
         // Initialize by subscribing to route query params
         this.route.queryParams
             .pipe(
-                filter((params) => Object.keys(params).length > 0),
+                // filter((params) => Object.keys(params).length > 0),
                 map((params) => {
                     // Convert string params to appropriate types when possible
                     const processedParams: Record<string, any> = {};
@@ -117,12 +117,21 @@ export class QueryParamsService {
      */
     removeParams(keys: string[]): void {
         const currentParams = { ...this._queryParams() };
-
+    
+        // Eliminamos físicamente las llaves del objeto
         keys.forEach((key) => {
             delete currentParams[key];
         });
-
-        this.updateParams(currentParams, { merge: false });
+    
+       
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: currentParams,
+            queryParamsHandling: '', 
+            replaceUrl: true
+        });
+    
+        this._queryParams.set(currentParams);
     }
 
     /**

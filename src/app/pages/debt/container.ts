@@ -38,6 +38,7 @@ import { Book } from './interface/book.model';
 import { DrawerDebt } from './drawer/drawer-form';
 import { debtList } from '@/common/components/list';
 import { Dropdown, DropdownModule } from 'primeng/dropdown';
+import { UsersService } from './users.service';
 
 @Component({
     selector: 'debts-container',
@@ -54,7 +55,7 @@ import { Dropdown, DropdownModule } from 'primeng/dropdown';
                     </ng-template>
 
                     <ng-template #filtersTemplate>
-                        <filter-group style="width: 100%" [filters]="filters()" [queryParams]="qpService.queryParams()" (selectedFilters)="onFilterSelect($event)" (clearFilters)="onClearFilters()"></filter-group>
+                        <filter-group style="width: 100%" [filters]="filters()" [queryParams]="qpService.queryParams()" (selectedFilters)="onFilterSelect($event)" (clearFilters)="onClearFilters()" [useDateFilters]="true"></filter-group>
                     </ng-template>
                 </page-header>
             </div>
@@ -157,6 +158,7 @@ export class DebtsContainer implements OnInit {
     confirmationModalService = inject(ConfirmationModalService);
     drawerService = inject(DrawerService);
     drawerFactory = inject(DrawerFactory);
+    usersService = inject(UsersService);
 
     debts = signal<Book[]>([]);
     debtselected = signal<Book>({} as Book);
@@ -170,6 +172,7 @@ export class DebtsContainer implements OnInit {
         { field: 'description', header: 'Descripción' },
         { field: 'amount', header: 'Monto', customComponent: 'currency' },
         { field: 'user', header: 'Dueño', customComponent: 'owner' },
+        { field: 'paidByUser', header: 'Pagado por', customComponent: 'payer' },
         { field: 'isPaid', header: 'Estado', customComponent: 'status' },
         { field: 'createdAt', header: 'Fecha Registro', customComponent: 'date' },
     ];
@@ -184,15 +187,28 @@ export class DebtsContainer implements OnInit {
     }));
 
     selectedPage = 1;
+    users = signal<any[]>([]);
 
     constructor() {}
 
     ngOnInit() {
         this.qpService.clearParams();
-        this.getFilters();
-        this.getData();
+        this.loadInitialData();
     }
 
+    async loadInitialData() {
+        // 1. Primero cargamos los usuarios
+        this.usersService.getAll().subscribe({
+            next: (data) => {
+                this.users.set(data);
+                // 2. Una vez tenemos los usuarios, cargamos los filtros
+                this.getFilters();
+            },
+        });
+        setTimeout(() => {
+            this.getData();
+        }, 0);
+    }
     async getData() {
         if (this.qpService.isEmpty()) {
             await this.qpService.updateParams({ page: 1, size: 10 });
@@ -203,45 +219,73 @@ export class DebtsContainer implements OnInit {
             next: (data) => {
                 this.debts.set(data.items);
                 this.pagination.set(data.pagination);
+    
+                // Buscamos el monto máximo en la data recibida
+                if (data.items.length > 0) {
+                    const maxAmount = Math.max(...data.items.map((item: any) => item.amount));
+                    this.updateSliderMax(maxAmount);
+                }
             },
             error: (error) => console.error(error),
         });
     }
-
-    getFilters() {
-        this.debtsService.getFilters().subscribe({
-            next: (data: any) => {
-                const rawFilters = data?.filters || data;
-
-                if (rawFilters && Array.isArray(rawFilters)) {
-                    const preparedFilters = this.qpService.prepareFilters(rawFilters);
-                    this.filters.set(preparedFilters);
-                }
-            },
-            error: (error) => console.error('Error al obtener filtros:', error),
-        });
+    updateSliderMax(newMax: number) {
+        this.filters.update(currentFilters => 
+            currentFilters.map(f => f.queryParam === 'amount' ? { ...f, max: Math.ceil(newMax) } : f)
+        );
     }
 
-    openScraping() {
-        // this.debtsService.scraping(this.selectedPage).subscribe({
-        //     next: () => {
-        //         this.messageService.add({
-        //             severity: 'success',
-        //             summary: 'Obtención exitosa',
-        //             detail: 'Se obtuvo correctamente los libros',
-        //         });
-        //         this.getData();
-        //         this.getFilters();
-        //     },
-        //     error: (error) => {
-        //         this.messageService.add({
-        //             severity: 'error',
-        //             summary: 'Error',
-        //             detail: 'Ocurrió un error al obtener los libros',
-        //         });
-        //         console.error('Error scraping debts:', error);
-        //     },
-        // });
+    getFilters() {
+        // 1. Mapeamos las opciones de usuario
+        const userOptions = this.users().map((u) => ({
+            id: u.userId,
+            name: `${u.firstName} ${u.lastName}`,
+        }));
+
+        // 2. Definimos la configuración completa de filtros
+        const staticFilters = [
+            {
+                name: 'Estado',
+                queryParam: 'isPaid',
+                values: [
+                    { id: 'true', name: 'Pagadas' },
+                    { id: 'false', name: 'Pendientes' },
+                ],
+            },
+            {
+                name: 'Monto',
+                queryParam: 'amount',
+                type: 'slider',
+                min: 0,
+                max: 5000,
+            },
+            {
+                name: 'Dueño',
+                queryParam: 'userId',
+                values: userOptions,
+            },
+            {
+                name: 'Pagado por',
+                queryParam: 'paidByUserId',
+                values: userOptions,
+            },
+        ];
+
+        // 3. Procesamos para marcar seleccionados según la URL
+        const preparedFilters = this.qpService.prepareFilters(staticFilters);
+        this.filters.set(preparedFilters);
+    }
+
+    private searchTimeout: any;
+
+    onSearch(event: any) {
+        const value = event.target.value;
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+
+        this.searchTimeout = setTimeout(async () => {
+            await this.qpService.updateParams({ description: value, page: 1 });
+            this.getData();
+        }, 400); // Espera 400ms después de dejar de escribir
     }
 
     openBook(item: any) {
@@ -303,64 +347,63 @@ export class DebtsContainer implements OnInit {
         this.getData();
     }
 
-    async onFilterSelect(filter: any) {
-        if (!filter.selectedItem) {
-            await this.qpService.removeParams([filter.queryParam]);
-        } else {
-            const valueToApply = filter.selectedItem.id;
-            
-            await this.qpService.updateParams({
-                [filter.queryParam]: valueToApply,
-                page: 1 
-            });
-        }
-        this.getData();
-    }
-    // async onFilterSelect(filter: any) {
-    //     if (filter.queryParam === 'dateRange') {
-    //         if (!filter.selectedItem) {
-    //             await this.qpService.removeParams(['dateFrom', 'dateTo']);
-    //         } else {
-    //             await this.qpService.updateParams({
-    //                 dateFrom: filter.selectedItem.dateFrom,
-    //                 dateTo: filter.selectedItem.dateTo,
-    //             });
-    //         }
-    //     } else if (filter.queryParam === 'price') {
-    //         if (!filter.selectedItem) {
-    //             await this.qpService.removeParams(['priceMin', 'priceMax']);
-    //         } else {
-    //             const [min, max] = filter.selectedItem;
-    //             await this.qpService.updateParams({
-    //                 priceMin: min,
-    //                 priceMax: max,
-    //             });
-    //         }
-    //     } else {
-    //         if (!filter.selectedItem) {
-    //             await this.qpService.removeParams([filter.queryParam]);
-    //         } else {
-    //             await this.qpService.updateParams({
-    //                 [filter.queryParam]: filter.selectedItem.name,
-    //             });
-    //         }
-    //     }
-    //     await this.qpService.updateParams({ page: 1 });
-    //     this.getData();
-    // }
+    async onFilterSelect(event: any) {
+        const { queryParam, selectedItem } = event;
 
-    async onClearFilters() {
-        const standardFilterParams = this.filters().flatMap((filter: any) => {
-            if (filter.values) {
-                return [filter.queryParam];
+        if (!selectedItem) {
+            if (queryParam === 'amount') {
+                await this.qpService.removeParams(['amountMin', 'amountMax']);
+            } else if (queryParam === 'dateRange') {
+                await this.qpService.removeParams(['dateFrom', 'dateTo']);
             } else {
-                return [`${filter.queryParam}Min`, `${filter.queryParam}Max`];
+                await this.qpService.removeParams([queryParam]);
             }
-        });
-        const allFilterParams = [...standardFilterParams];
-        await this.qpService.removeParams(allFilterParams);
+        } else {
+            // CASO ESPECIAL: Rango de Monto (Slider)
+            if (queryParam === 'amount' && Array.isArray(selectedItem)) {
+                await this.qpService.updateParams({
+                    amountMin: selectedItem[0],
+                    amountMax: selectedItem[1],
+                });
+            }
+            // CASO ESPECIAL: Rango de Fechas
+            else if (queryParam === 'dateRange') {
+                await this.qpService.updateParams({
+                    dateFrom: selectedItem.dateFrom,
+                    dateTo: selectedItem.dateTo,
+                });
+            }
+            // CASO GENERAL: Dropdowns (id) o Buscador (query)
+            else {
+                await this.qpService.updateParams({
+                    [queryParam]: selectedItem.id || selectedItem,
+                });
+            }
+        }
+
         await this.qpService.updateParams({ page: 1 });
         this.getData();
+    }
+
+    async onClearFilters() {
+        const rangeParams = this.filters()
+            .filter((f) => f.type === 'slider' || !f.values)
+            .flatMap((f) => [`${f.queryParam}Min`, `${f.queryParam}Max`]);
+
+        // 2. Recolectamos las llaves de selectores simples
+        const selectParams = this.filters()
+            .filter((f) => f.values)
+            .map((f) => f.queryParam);
+
+        const manualParams = ['query', 'dateFrom', 'dateTo', 'userId', 'paidByUserId'];
+
+        const allFilterParams = [...rangeParams, ...selectParams, ...manualParams];
+
+        await this.qpService.removeParams(allFilterParams);
+        await this.qpService.updateParams({ page: 1 });
+
+        this.getData();
+        this.getFilters();
     }
 
     openCreateDebt() {
