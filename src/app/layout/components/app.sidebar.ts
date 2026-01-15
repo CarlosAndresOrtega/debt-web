@@ -67,7 +67,7 @@ import { AuthService } from '@/pages/auth/auth.service';
                                 [hideOnOutsideClick]="true"
                             >
                                 <i class="pi pi-fw pi-sign-out mr-2"></i>
-                                <span>Logout</span>
+                                <span>Cerrar sesión</span>
                             </a>
                         </li>
                     </ul>

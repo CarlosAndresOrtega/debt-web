@@ -6,7 +6,7 @@ export interface Book {
     stock: number;
     category: string;
 }
-export interface BooksResponse {
+export interface debtsResponse {
     items: Book[];
     pagination: {
         pageSize: number,

@@ -6,66 +6,94 @@ import { SelectModule } from 'primeng/select';
 import { CalendarModule } from 'primeng/calendar';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SliderModule } from 'primeng/slider';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputIconModule } from 'primeng/inputicon';
+import { IconFieldModule } from 'primeng/iconfield';
+import { debounceTime, Subject, takeUntil } from 'rxjs';
 
 @Component({
     selector: 'filter-group',
     standalone: true,
-    imports: [SelectModule, CommonModule, FormsModule, Button, DatePickerModule, SliderModule],
+    imports: [SelectModule, CommonModule, FormsModule, Button, DatePickerModule, SliderModule, InputTextModule, IconFieldModule, InputIconModule],
     template: `
-        <ng-container>
-            <div class="flex flex-wrap gap-2 w-full justify-between">
-                <div class="flex gap-5 flex-wrap">
-                    @for (filter of filters(); track $index) {
-                        @if (filter.values) {
-                            <!-- Filtros de selección -->
-                            <p-select
-                                [options]="filter.values"
-                                optionLabel="name"
-                                [placeholder]="filter.name"
-                                [filter]="true"
-                                filterBy="name"
-                                [showClear]="true"
-                                (onChange)="onFilterSelect(filter.queryParam, $event.value)"
-                                [ngModel]="getSelectedValue(filter)"
-                                [autofocusFilter]="false"
-                                [dt]="pillSelect"
-                                name="filter-{{ filter.queryParam }}"
-                            ></p-select>
-                        } @else {
-                            <!-- Filtro tipo rango (slider) -->
-                            <div class="flex flex-col gap-2 w-full sm:w-[300px]">
-                                <label class="text-sm font-medium">{{ filter.name }}: {{ getSelectedRange(filter) }}</label>
-                                <p-slider [min]="filter.min" [max]="filter.max" [range]="true" [(ngModel)]="selectedRanges[filter.queryParam]" (onSlideEnd)="onFilterRangeSelect(filter.queryParam, selectedRanges[filter.queryParam])" ></p-slider>
-                                
+        <div class="flex flex-wrap gap-4 w-full justify-between items-center">
+            <div class="flex gap-4 flex-wrap items-center flex-1">
+                <p-iconfield iconPosition="left" class="w-full md:w-72">
+                    <p-inputicon styleClass="pi pi-search" />
+                    <input 
+                        type="text" 
+                        pInputText 
+                        [(ngModel)]="searchQuery" 
+                        (ngModelChange)="onSearchChange($event)" 
+                        placeholder="Buscar por descripción..." 
+                        class="w-full !rounded-full" 
+                    />
+                </p-iconfield>
+
+                @for (filter of filters(); track $index) {
+                    @if (filter.type === 'slider') {
+                        <div class="flex flex-col gap-1 px-4 py-2 border border-surface-300 dark:border-surface-700 rounded-[24px] bg-surface-0 dark:bg-surface-900 min-w-[220px]">
+                            <label class="text-[10px] font-bold uppercase text-surface-500">
+                                {{ filter.name }}: {{ getSelectedRange(filter) }}
+                            </label>
+                            <div class="px-1 py-1">
+                                <p-slider 
+                                    [min]="filter.min" 
+                                    [max]="filter.max" 
+                                    [range]="true" 
+                                    [(ngModel)]="selectedRanges[filter.queryParam]" 
+                                    (onSlideEnd)="onFilterRangeSelect(filter.queryParam, selectedRanges[filter.queryParam])">
+                                </p-slider>
                             </div>
-                        }
-                    }
-
-                    @if (useDateFilters()) {
-                        <!-- Date Range Filter -->
-                        <p-datepicker
-                            selectionMode="range"
-                            [placeholder]="'Rango de fechas'"
-                            [readonlyInput]="true"
-                            [showClear]="false"
-                            [(ngModel)]="dateRange"
-                            (onSelect)="onDateRangeSelect()"
-                            (onClear)="onDateRangeClear()"
-                            dateFormat="yy-mm-dd"
+                        </div>
+                    } @else if (filter.values) {
+                        <p-select
+                            [options]="filter.values"
+                            optionLabel="name"
+                            [placeholder]="filter.name"
+                            [filter]="true"
+                            filterBy="name"
+                            [showClear]="true"
+                            (onChange)="onFilterSelect(filter.queryParam, $event.value)"
+                            [ngModel]="getSelectedValue(filter)"
                             [dt]="pillSelect"
-                        />
+                        ></p-select>
                     }
-                </div>
+                }
 
-                <p-button *ngIf="hasSelectedFilters()" label="Borrar Filtros" styleClass="p-button-text p-button-secondary ml-auto" (onClick)="onClearFilters()"></p-button>
+                @if (useDateFilters()) {
+                    <p-datepicker
+                        selectionMode="range"
+                        [placeholder]="'Rango de fechas'"
+                        [readonlyInput]="true"
+                        [showClear]="true"
+                        [(ngModel)]="dateRange"
+                        (onSelect)="onDateRangeSelect()"
+                        (onClear)="onDateRangeClear()"
+                        dateFormat="yy-mm-dd"
+                        [dt]="pillSelect"
+                    />
+                }
             </div>
-        </ng-container>
+
+            <p-button 
+                *ngIf="hasSelectedFilters()" 
+                label="Borrar Filtros" 
+                icon="pi pi-filter-slash"
+                styleClass="p-button-text p-button-secondary ml-auto" 
+                (onClick)="onClearFilters()">
+            </p-button>
+        </div>
     `,
     styles: [
         `
             :host ::ng-deep {
-                .p-datepicker-input {
+                /* Quitamos height fijo, usamos padding natural de PrimeNG */
+                .p-datepicker-input, .p-select, .p-inputtext {
                     border-radius: 24px !important;
+                }
+                .p-select {
+                    min-width: 180px;
                 }
             }
         `,
@@ -89,7 +117,9 @@ export class FilterGroup implements OnInit {
 
     selectedFilters = output<any>();
     clearFilters = output();
-
+    searchQuery: string = '';
+    private searchSubject = new Subject<string>();
+    private destroy$ = new Subject<void>();
     // Add input for preselected values from query params
     queryParams = input(
         {},
@@ -115,8 +145,27 @@ export class FilterGroup implements OnInit {
         // Initialize selected values from query params
         this.updateSelectedValues();
         this.initDateRangeFromQueryParams();
+
+        const params: any = this.queryParams();
+        if (params?.query) this.searchQuery = params.query;
+
+        // Configurar Debounce para el buscador
+        this.searchSubject.pipe(
+            debounceTime(400),
+            takeUntil(this.destroy$)
+        ).subscribe(value => {
+            this.selectedFilters.emit({ queryParam: 'query', selectedItem: value ? { id: value } : null });
+        });
     }
 
+    onSearchChange(value: string) {
+        this.searchSubject.next(value);
+    }
+
+    ngOnDestroy() {
+        this.destroy$.next();
+        this.destroy$.complete();
+    }
     // Initialize date range from query params if they exist
     private initDateRangeFromQueryParams() {
         const params: any = this.queryParams();
@@ -281,17 +330,23 @@ export class FilterGroup implements OnInit {
 
     // Handle clear filters button click
     onClearFilters() {
-        // Clear internal state
-        this.selectedValues.set({});
-        // Clear date range
+        this.searchQuery = '';
         this.dateRange = null;
-        // Emit the event
+        
+        // Resetear los sliders a su rango original
+        this.filters().forEach((filter: any) => {
+            if (filter.type === 'slider') {
+                this.selectedRanges[filter.queryParam] = [filter.min, filter.max];
+            }
+        });
+    
+        this.selectedValues.set({});
         this.clearFilters.emit();
     }
 
     getSelectedRange(filter: any): string {
         const range = this.selectedRanges[filter.queryParam];
-        const currency = '£'; // símbolo de libra
+        const currency = '$'; 
         return range ? `${currency}${range[0]} - ${currency}${range[1]}` : `${currency}${filter.min} - ${currency}${filter.max}`;
     }
 

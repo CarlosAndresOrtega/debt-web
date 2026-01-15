@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
-import { BooksContainer } from './books/container';
+import { DebtsContainer } from './debt/container';
 
 export default [
-    { path: '', redirectTo: 'books', pathMatch: 'full' },
-    { path: 'books', data: { breadcrumb: 'Books' }, component: BooksContainer },
+    { path: '', redirectTo: 'debts', pathMatch: 'full' },
+    { path: 'debts', data: { breadcrumb: 'Debts' }, component: DebtsContainer },
 ] as Routes;

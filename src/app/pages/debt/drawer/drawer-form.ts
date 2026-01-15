@@ -1,215 +1,170 @@
 import { CommonModule } from '@angular/common';
-import { Component, ContentChild, effect, inject, Input, input, OnInit, output, signal, TemplateRef, ViewChild, EffectRef } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Component, ContentChild, effect, inject, input, signal, TemplateRef } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { Checkbox } from 'primeng/checkbox';
 import { DrawerModule } from 'primeng/drawer';
-import { FileUpload, FileUploadModule } from 'primeng/fileupload';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
-import { TabsModule } from 'primeng/tabs';
-import { TimelineModule } from 'primeng/timeline';
 import { ToastModule } from 'primeng/toast';
-// import { CustomersService } from './customers.service';
-import { catchError, map, Observable, of } from 'rxjs';
-import { SelectModule } from 'primeng/select';
-import { DatePickerModule } from 'primeng/datepicker';
-import { GoogleMap, GoogleMapsModule } from '@angular/google-maps';
 import { MessageService } from 'primeng/api';
-import { Dialog } from 'primeng/dialog';
-import { LayoutService } from '@/layout/service/layout.service';
-import { ConfirmationModalService } from '@/common/services/confirmation-modal.service';
+import { TagModule } from 'primeng/tag';
 import { DrawerService } from '@/common/services/drawer.service';
 import { BaseDrawerComponent } from '@/common/components/base-drawer.component';
-import { ClientData } from '@/common/interfaces/drawer-configs';
-import { BooksService } from '../debts.service';
+import { DebtsService } from '../debts.service';
 
 @Component({
-    selector: 'drawer-book',
-    imports: [
-        CommonModule,
-        TabsModule,
-        FormsModule,
-        ReactiveFormsModule,
-        InputTextModule,
-        InputGroupModule,
-        InputGroupAddonModule,
-        FileUploadModule,
-        ToastModule,
-        TimelineModule,
-        DrawerModule,
-        ButtonModule,
-        SelectModule,
-        DatePickerModule,
-        GoogleMapsModule,
-    ],
+    selector: 'drawer-debt', // Selector limpio
     standalone: true,
+    imports: [
+        CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, 
+        InputGroupModule, InputGroupAddonModule, DrawerModule, 
+        ButtonModule, ToastModule, TagModule
+    ],
     template: `
-        <p-drawer [visible]="isDrawerVisible()" position="right" [header]="getDrawerState().title()" [modal]="true" styleClass="!w-full md:!w-80 lg:!w-[30rem]" (onHide)="onClose()">
+        <p-drawer 
+            [visible]="isDrawerVisible()" 
+            position="right" 
+            [header]="getDrawerState().title()" 
+            [modal]="true" 
+            styleClass="!w-full md:!w-80 lg:!w-[30rem]" 
+            (onHide)="onClose()">
+            
             <ng-template #content>
-                <p-tabs [value]="tabValue">
-                    <p-tablist>
-                        <p-tab (click)="tabValue = 0" [value]="0">General</p-tab>
-                    </p-tablist>
-                    <p-tabpanels>
-                        <p-tabpanel [value]="0">
-                            <form class="flex flex-col gap-4" *ngIf="formGroup" [formGroup]="formGroup">
-                                <!-- Título -->
-                                <div class="flex flex-col gap-2">
-                                    <label for="title">Título</label>
-                                    <input pInputText id="title" formControlName="title" type="text" />
-                                </div>
+                <form class="flex flex-col gap-6 p-4" *ngIf="formGroup" [formGroup]="formGroup">
+                    <div *ngIf="isEditMode()" class="flex justify-between items-center bg-surface-50 dark:bg-surface-800 p-3 rounded-lg">
+                        <span class="text-sm font-medium">Estado actual:</span>
+                        <p-tag 
+                            [severity]="formGroup.get('isPaid')?.value ? 'success' : 'warn'" 
+                            [value]="formGroup.get('isPaid')?.value ? 'PAGADA' : 'PENDIENTE'">
+                        </p-tag>
+                    </div>
 
-                                <!-- Precio -->
-                                <div class="flex flex-col gap-2">
-                                    <label for="price">Precio</label>
-                                    <input pInputText id="price" formControlName="price" type="text"/>
-                                </div>
+                    <div class="flex flex-col gap-2">
+                        <label for="description" class="font-bold text-surface-700 dark:text-surface-200">Descripción *</label>
+                        <input pInputText id="description" formControlName="description" type="text" placeholder="Ej. Pago de servicios" />
+                    </div>
 
-                                <!-- Rating -->
-                                <div class="flex flex-col gap-2">
-                                    <label for="rating">Rating</label>
-                                    <input pInputText id="rating" formControlName="rating" type="number" />
-                                </div>
+                    <div class="flex flex-col gap-2">
+                        <label for="amount" class="font-bold text-surface-700 dark:text-surface-200">Monto *</label>
+                        <p-inputGroup>
+                            <p-inputGroupAddon>$</p-inputGroupAddon>
+                            <input pInputText id="amount" formControlName="amount" type="number" placeholder="0.00" />
+                        </p-inputGroup>
+                        <small class="text-red-500" *ngIf="formGroup.get('amount')?.invalid && formGroup.get('amount')?.dirty">
+                            El monto debe ser un valor positivo mayor a 0.
+                        </small>
+                    </div>
 
-                                <!-- Stock -->
-                                <div class="flex flex-col gap-2">
-                                    <label for="stock">Stock</label>
-                                    <input pInputText id="stock" formControlName="stock" type="number" />
-                                </div>
-
-                                <!-- Categoría -->
-                                <div class="flex flex-col gap-2">
-                                    <label for="category">Categoría</label>
-                                    <input pInputText id="category" formControlName="category" type="text" />
-                                </div>
-
-                                <!-- Descripción -->
-                                <div class="flex flex-col gap-2">
-                                    <label for="description">Descripción</label>
-                                    <p class="p-3 border rounded bg-surface-50 dark:bg-surface-800 text-sm" style="white-space: pre-line;">
-                                        {{ formGroup.get('description')?.value }}
-                                    </p>
-                                </div>
-                            </form>
-                        </p-tabpanel>
-                    </p-tabpanels>
-                </p-tabs>
+                    <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg" *ngIf="formGroup.disabled">
+                        <p class="text-sm text-blue-700 dark:text-blue-300">
+                            <i class="pi pi-info-circle mr-2"></i>
+                            Esta deuda ya ha sido pagada y no puede ser modificada.
+                        </p>
+                    </div>
+                </form>
             </ng-template>
-            <ng-template #footer>
-                <div class="flex gap-4">
 
-                    <ng-container *ngIf="getDrawerState().title().includes('Detalle'); else defaultFooter">
-                        <ng-container *ngIf="actionsTemplate">
-                            <ng-container *ngTemplateOutlet="actionsTemplate"></ng-container>
-                        </ng-container>
+            <ng-template #footer>
+                <div class="flex gap-4 w-full">
+                    <p-button label="Descartar" [rounded]="true" (click)="onClose()" severity="secondary" class="flex-1" />
+                    
+                    <ng-container *ngIf="isEditMode(); else createBtn">
+                         <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
                     </ng-container>
 
-                    <ng-template #defaultFooter>
-                        <p-button label="Descartar" [rounded]="true" (click)="onClose()" severity="secondary" />
+                    <ng-template #createBtn>
+                        <p-button 
+                            label="Guardar Deuda" 
+                            [rounded]="true" 
+                            styleClass="!bg-orange-500 !border-orange-500"
+                            class="flex-1" 
+                            [disabled]="formGroup.invalid"
+                            (onClick)="saveDebt()" />
                     </ng-template>
                 </div>
             </ng-template>
         </p-drawer>
     `,
 })
-export class DrawerBook extends BaseDrawerComponent<ClientData> {
-    @ViewChild('hiddenFileUpload') hiddenFileUpload!: FileUpload;
-    @ViewChild('map') googleMap!: GoogleMap;
+export class DrawerDebt extends BaseDrawerComponent<any> {
     @ContentChild('actionsTemplate') actionsTemplate?: TemplateRef<any>;
 
     drawerService = inject(DrawerService);
     messageService = inject(MessageService);
-    booksService = inject(BooksService);
-    layoutService = inject(LayoutService);
-    confirmationModalService = inject(ConfirmationModalService);
+    debtsService = inject(DebtsService);
     fb = inject(FormBuilder);
 
-    // Form groups
     formGroup!: FormGroup;
-    readonlyMode = false;
-
-    // Component state
-    tabValue: number = 0;
-    clientImages = signal<any>([]);
-    allInteractions$: Observable<any> = of([]);
-    selectedImageId = signal<number | undefined>(undefined);
     isDrawerVisible = signal(false);
-
+    isEditMode = signal(false);
     key = input<string | undefined>(undefined);
 
     constructor() {
         super();
         this.destroyEffect = effect(() => {
-            if (!this.isInitialized()) {
-                return;
-            }
+            if (!this.isInitialized() || !this.key()) return;
+
             const state = this.drawerService.getState<any>(this.key());
-            const data = state.data();
-            if (state.visible() && data) {
-                this.onDataReceived(data);
+            this.isDrawerVisible.set(state.visible());
+
+            if (state.visible()) {
+                this.onDataReceived(state.data());
             }
-            this.updateDrawerVisibility(state.visible());
         });
     }
 
-    // Implementation of abstract methods from BaseDrawerComponent
     protected override initializeForm(): void {
-        this.setForms();
+        this.formGroup = this.fb.group({
+            id: [null],
+            description: ['', [Validators.required, Validators.minLength(3)]],
+            amount: [null, [Validators.required, Validators.min(0.01)]], // Validación de monto positivo
+            isPaid: [false]
+        });
     }
 
     protected override onDataReceived(data: any): void {
-        this.getData();
-    }
+        const debtId = this.getMetadataValue('Id');
 
-    protected override validateForm(): boolean {
-        return this.formGroup?.valid ?? false;
-    }
-
-    protected override getFormData(): any {
-        return {
-            ...this.formGroup.value,
-        };
-    }
-
-
-    getData() {
-        const bookId = this.getMetadataValue('Id');
-        if (!bookId) {
-            return;
+        if (debtId) {
+            this.isEditMode.set(true);
+            this.loadDebtData(debtId);
+        } else {
+            this.isEditMode.set(false);
+            this.formGroup.reset({ isPaid: false });
+            this.formGroup.enable();
         }
+    }
 
-        this.booksService.getBookById(bookId).subscribe({
+    private loadDebtData(id: number) {
+        this.debtsService.getDebtById(id).subscribe({
             next: (data: any) => {
-
-                // ✅ Hacemos el patch con los datos recibidos
-                this.formGroup.patchValue({
-                    title: data.title,
-                    price: `£${data.price}`,
-                    rating: data.rating,
-                    stock: data.stock,
-                    category: data.category,
-                    description: data.description,
-                });
-
-                // ✅ Deshabilitamos el formulario para solo lectura
-                this.formGroup.disable();
+                this.formGroup.patchValue(data);
+                // REGLA: Si la deuda está pagada, se deshabilita el formulario
+                if (data.isPaid) {
+                    this.formGroup.disable();
+                } else {
+                    this.formGroup.enable();
+                }
             },
-            error: (err) => {
-                console.error('Error fetching book details:', err);
-            },
+            error: (err) => console.error('Error al cargar la deuda:', err)
         });
     }
 
-    setForms() {
-        this.formGroup = this.fb.group({
-            title: [''],
-            price: [''],
-            rating: [0],
-            stock: [0],
-            category: [''],
-            description: [''],
+    saveDebt() {
+        if (this.formGroup.invalid) return;
+        
+        const payload = this.formGroup.getRawValue();
+        this.debtsService.createDebt(payload).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Deuda registrada correctamente' });
+                this.onClose();
+                // Aquí deberías refrescar la tabla en el container
+            },
+            error: (err) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error.message })
         });
     }
+
+    protected override validateForm(): boolean { return this.formGroup?.valid; }
+    protected override getFormData(): any { return this.formGroup?.getRawValue(); }
 }
