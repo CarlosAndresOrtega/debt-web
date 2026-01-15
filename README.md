@@ -28,8 +28,8 @@ Sigue estos pasos para ejecutar el proyecto en tu máquina:
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone <url-de-tu-repositorio>
-    cd <nombre-de-tu-proyecto>
+    git clone https://github.com/CarlosAndresOrtega/debt-web.git
+    cd debt-web
     ```
 
 2.  **Instalar dependencias:**
