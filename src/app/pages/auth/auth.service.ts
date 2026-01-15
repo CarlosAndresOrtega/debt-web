@@ -74,7 +74,6 @@ export class AuthService {
      * @param credentials
      */
     signIn(credentials: { email: string; password: string }): Observable<any> {
-        // Throw error, if the user is already logged in
         if (this._authenticated) {
             return throwError('User is already logged in.');
         }
@@ -141,18 +140,15 @@ export class AuthService {
      * Sign out
      */
     signOut(): Observable<any> {
-        // Remove the access token from the local storage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         localStorage.removeItem('user-roles');
         localStorage.removeItem('user-permissions');
         localStorage.removeItem('sessionId');
-        // Set the authenticated flag to false
         this._authenticated = false;
 
         this._router.navigate(['/auth/login']);
-        // Return the observable
         return of(true);
     }
 

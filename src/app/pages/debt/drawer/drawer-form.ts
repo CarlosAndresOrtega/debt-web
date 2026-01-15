@@ -15,7 +15,7 @@ import { DebtsService } from '../debts.service';
 import { AuthService } from '@/pages/auth/auth.service';
 
 @Component({
-    selector: 'drawer-debt', // Selector limpio
+    selector: 'drawer-debt', 
     standalone: true,
     imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, InputGroupModule, InputGroupAddonModule, DrawerModule, ButtonModule, ToastModule, TagModule],
     template: `
@@ -101,7 +101,7 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         this.formGroup = this.fb.group({
             id: [null],
             description: ['', [Validators.required, Validators.minLength(3)]],
-            amount: [null, [Validators.required, Validators.min(0.01)]], // Validación de monto positivo
+            amount: [null, [Validators.required, Validators.min(0.01)]],
             isPaid: [false],
         });
     }
@@ -134,19 +134,17 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         });
     }
 
-    // En drawer-form.ts -> saveDebt()
     saveDebt() {
         if (this.formGroup.invalid) return;
 
         const rawValue = this.formGroup.getRawValue();
-        const id = rawValue.id; // Extraemos el ID explícitamente
+        const id = rawValue.id; 
 
         const payload = {
             ...rawValue,
             userId: id ? rawValue.user?.userId || rawValue.userId : this.authService.getCurrentUserId(),
         };
 
-        // Limpiamos objetos complejos para que el backend reciba solo IDs o primitivos
         delete payload.user;
         delete payload.paidByUser;
 

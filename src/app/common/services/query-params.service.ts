@@ -9,36 +9,28 @@ export class QueryParamsService {
     private router = inject(Router);
     private route = inject(ActivatedRoute);
 
-    // Signal to store current query params
     private _queryParams = signal<Record<string, any>>({});
 
-    // Expose readonly version of the signal
     queryParams = this._queryParams.asReadonly();
 
     constructor() {
-        // Initialize by subscribing to route query params
         this.route.queryParams
             .pipe(
-                // filter((params) => Object.keys(params).length > 0),
+                filter((params) => Object.keys(params).length > 0),
                 map((params) => {
-                    // Convert string params to appropriate types when possible
                     const processedParams: Record<string, any> = {};
                     for (const key in params) {
                         const value = params[key];
 
-                        // Try to parse numbers
                         if (!isNaN(Number(value)) && value !== '') {
                             processedParams[key] = Number(value);
                         }
-                        // Parse booleans
                         else if (value === 'true' || value === 'false') {
                             processedParams[key] = value === 'true';
                         }
-                        // Handle arrays stored as comma-separated strings
                         else if (typeof value === 'string' && value.includes(',')) {
                             processedParams[key] = value.split(',').map((item) => item.trim());
                         }
-                        // Keep as is
                         else {
                             processedParams[key] = value;
                         }
@@ -65,26 +57,22 @@ export class QueryParamsService {
     ): void {
         const currentParams = options.merge ? { ...this._queryParams() } : {};
 
-        // Merge or replace with new params
         const updatedParams = { ...currentParams, ...params };
 
-        // Remove null or undefined params
         Object.keys(updatedParams).forEach((key) => {
             if (updatedParams[key] === null || updatedParams[key] === undefined) {
                 delete updatedParams[key];
             }
 
-            // Convert arrays to comma-separated strings
             if (Array.isArray(updatedParams[key])) {
                 updatedParams[key] = updatedParams[key].join(',');
             }
         });
-        // Navigate with new params
         this.router.navigate([], {
             relativeTo: this.route,
             queryParams: updatedParams,
             replaceUrl: options.replaceUrl ?? false,
-            queryParamsHandling: null, // Remove to replace all params
+            queryParamsHandling: null, 
         });
     }
 
@@ -118,7 +106,6 @@ export class QueryParamsService {
     removeParams(keys: string[]): void {
         const currentParams = { ...this._queryParams() };
     
-        // Eliminamos físicamente las llaves del objeto
         keys.forEach((key) => {
             delete currentParams[key];
         });
@@ -151,7 +138,6 @@ export class QueryParamsService {
             ...f,
             values: f.values?.map((val: any) => ({
                 ...val,
-                // Comprobación de selección robusta
                 selected: currentParams[f.queryParam]?.toString() === val.id?.toString()
             })) || []
         }));

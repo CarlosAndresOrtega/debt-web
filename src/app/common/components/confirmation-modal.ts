@@ -1,4 +1,4 @@
-// confirmation-modal.component.ts
+
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
@@ -58,9 +58,6 @@ export class ConfirmationModalComponent implements OnInit {
     }
 
     onDialogHide() {
-        console.log('entra', this.visible);
-        // If the dialog is hidden without explicitly calling accept/reject,
-        // we treat it as rejection
         if (this.visible) {
             this.visible = false;
             this.rejectCallback();

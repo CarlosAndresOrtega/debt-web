@@ -8,7 +8,6 @@ export const appRoutes: Routes = [
         children: [
             {
                 path: '',
-                // data: { breadcrumb: 'Pages' },
                 loadChildren: () => import('./app/pages/pages.routes'),
             },
         ],

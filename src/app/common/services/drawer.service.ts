@@ -6,7 +6,7 @@ export interface BaseDrawerConfig<T = any> {
     data?: T;
     onClose?: () => void;
     onSave?: (data: T) => void;
-    metadata?: Record<string, any>; // For flexible additional properties
+    metadata?: Record<string, any>; 
 }
 
 export interface DrawerState<T = any> {

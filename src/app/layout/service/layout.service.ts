@@ -109,10 +109,8 @@ export class LayoutService {
 
     private initialized = false;
 
-    // In layout.service.ts, add to the constructor:
 
     constructor() {
-        // Load dark mode preference from localStorage on initialization
         const savedDarkMode = localStorage.getItem('darkTheme');
         if (savedDarkMode !== null) {
             this._config.darkTheme = savedDarkMode === 'true';
@@ -134,7 +132,6 @@ export class LayoutService {
                 return;
             }
 
-            // Save dark mode preference when it changes
             localStorage.setItem('darkTheme', config.darkTheme.toString());
             this.handleDarkModeTransition(config);
         });

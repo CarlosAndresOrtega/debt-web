@@ -225,7 +225,6 @@ export class AppMenuitem implements OnInit, OnDestroy {
             const [vWidth, vHeight] = [window.innerWidth, window.innerHeight];
             const [oWidth, oHeight] = [overlay.offsetWidth, overlay.offsetHeight];
             const scrollbarWidth = DomHandler.calculateScrollbarWidth();
-            // reset
             overlay.style.top = '';
             overlay.style.left = '';
 
@@ -240,13 +239,11 @@ export class AppMenuitem implements OnInit, OnDestroy {
     }
 
     itemClick(event: Event) {
-        // avoid processing disabled items
         if (this.item.disabled) {
             event.preventDefault();
             return;
         }
 
-        // navigate with hover
         if ((this.root && this.isSlim()) || this.isHorizontal() || this.isSlimPlus()) {
             this.layoutService.layoutState.update((val) => ({
                 ...val,
@@ -254,12 +251,10 @@ export class AppMenuitem implements OnInit, OnDestroy {
             }));
         }
 
-        // execute command
         if (this.item.command) {
             this.item.command({ originalEvent: event, item: this.item });
         }
 
-        // toggle active state
         if (this.item.items) {
             this.active = !this.active;
 
@@ -287,7 +282,6 @@ export class AppMenuitem implements OnInit, OnDestroy {
     }
 
     onMouseEnter() {
-        // activate item on hover
         if (this.root && (this.isSlim() || this.isHorizontal() || this.isSlimPlus()) && this.layoutService.isDesktop()) {
             if (this.layoutService.layoutState().menuHoverActive) {
                 this.active = true;

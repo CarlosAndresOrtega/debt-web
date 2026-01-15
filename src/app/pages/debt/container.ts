@@ -293,7 +293,7 @@ export class DebtsContainer implements OnInit {
     }
 
     confirmDeleteDebt(item: any) {
-        this.bookToDelete.set(item); // Reutilizamos tu señal de eliminación
+        this.bookToDelete.set(item); 
         this.confirmationModalService
             .confirm({
                 header: 'Confirmar Eliminación',
@@ -468,7 +468,6 @@ export class DebtsContainer implements OnInit {
             ];
         }
 
-        // Filtramos manualmente los items para que solo los visibles lleguen al menú
         this.menu.model = allItems;
         this.menu.toggle(event.event);
     }
