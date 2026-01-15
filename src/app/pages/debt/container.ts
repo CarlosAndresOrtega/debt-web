@@ -80,7 +80,7 @@ import { AuthService } from '../auth/auth.service';
                                             <p-tag [severity]="item.isPaid ? 'success' : 'warn'" [value]="item.isPaid ? 'Pagada' : 'Pendiente'"></p-tag>
                                         </div>
 
-                                        <button type="button" class="text-surface-500 dark:text-surface-300" (click)="openDebt(item)">
+                                        <button type="button" (click)="openDebt(item)">
                                             <i class="pi pi-chevron-right text-xl"></i>
                                         </button>
                                     </div>
@@ -99,11 +99,11 @@ import { AuthService } from '../auth/auth.service';
                 </div>
 
                 <drawer-debt [key]="'debt-drawer'">
-                    <ng-template #actionsTemplate>
+                    <!-- <ng-template #actionsTemplate>
                         <div class="w-full flex justify-end gap-5">
                             <p-button label="Eliminar" [rounded]="true" (click)="confirmDeleteDebt(debtselected())" severity="danger" />
                         </div>
-                    </ng-template>
+                    </ng-template> -->
                 </drawer-debt>
             </div>
         </div>
@@ -225,7 +225,7 @@ export class DebtsContainer implements OnInit {
             next: (data) => {
                 this.debts.set(data.items);
                 this.pagination.set(data.pagination);
-    
+
                 if (data.items.length > 0) {
                     const maxAmount = Math.max(...data.items.map((item: any) => item.amount));
                     this.updateSliderMax(maxAmount);
@@ -235,9 +235,7 @@ export class DebtsContainer implements OnInit {
         });
     }
     updateSliderMax(newMax: number) {
-        this.filters.update(currentFilters => 
-            currentFilters.map(f => f.queryParam === 'amount' ? { ...f, max: Math.ceil(newMax) } : f)
-        );
+        this.filters.update((currentFilters) => currentFilters.map((f) => (f.queryParam === 'amount' ? { ...f, max: Math.ceil(newMax) } : f)));
     }
 
     getFilters() {
@@ -309,13 +307,13 @@ export class DebtsContainer implements OnInit {
                 if (confirmed) {
                     this.debtsService.delete(item.id).subscribe({
                         next: () => {
-                            this.messageService.add({ 
-                                severity: 'success', 
-                                summary: 'Eliminada', 
-                                detail: 'La deuda ha sido removida' 
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Eliminada',
+                                detail: 'La deuda ha sido removida',
                             });
                             this.getData();
-                        }
+                        },
                     });
                 }
             });
@@ -353,14 +351,12 @@ export class DebtsContainer implements OnInit {
                     amountMin: selectedItem[0],
                     amountMax: selectedItem[1],
                 });
-            }
-            else if (queryParam === 'dateRange') {
+            } else if (queryParam === 'dateRange') {
                 await this.qpService.updateParams({
                     dateFrom: selectedItem.dateFrom,
                     dateTo: selectedItem.dateTo,
                 });
-            }
-            else {
+            } else {
                 await this.qpService.updateParams({
                     [queryParam]: selectedItem.id || selectedItem,
                 });
@@ -406,10 +402,10 @@ export class DebtsContainer implements OnInit {
             key: 'debt-drawer',
             title: `Editar: ${item.description}`,
             data: item,
-            metadata: { 
-                Id: item.id, 
-                mode: 'edit' 
-            }
+            metadata: {
+                Id: item.id,
+                mode: 'edit',
+            },
         });
     }
 
@@ -427,35 +423,53 @@ export class DebtsContainer implements OnInit {
                 this.getData();
             },
             error: (err) => {
-                this.messageService.add({ 
-                    severity: 'error', 
-                    summary: 'Error', 
-                    detail: 'No se pudo procesar el pago' 
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'No se pudo procesar el pago',
                 });
-            }
+            },
         });
     }
 
     handleMenuClick(event: { event: Event; item: any }) {
-        const menuItems = [
-            {
-                label: 'Ver Detalle',
-                icon: 'pi pi-eye',
-                command: () => this.openDebt(event.item),
-            },
-            {
-                label: 'Marcar como Pagada',
-                icon: 'pi pi-check',
-                visible: !event.item.isPaid,
-                command: () => this.markAsPaid(event.item),
-            },
-            {
-                label: 'Eliminar',
-                icon: 'pi pi-trash',
-                command: () => this.confirmDeleteDebt(event.item),
-            },
-        ];
-        this.menu.model = menuItems;
+        const isPaid = event.item.isPaid;
+        let allItems = [];
+        if (!isPaid) {
+            allItems = [
+                {
+                    label: 'Editar',
+                    icon: 'pi pi-pencil',
+                    visible: !isPaid,
+                    command: () => this.openEditDebt(event.item),
+                },
+                {
+                    label: 'Marcar como Pagada',
+                    icon: 'pi pi-check',
+                    visible: !isPaid,
+                    styleClass: 'text-green-500',
+                    command: () => this.markAsPaid(event.item),
+                },
+                {
+                    label: 'Eliminar',
+                    icon: 'pi pi-trash',
+                    visible: !isPaid,
+                    styleClass: 'text-red-500',
+                    command: () => this.confirmDeleteDebt(event.item),
+                },
+            ];
+        } else {
+            allItems = [
+                {
+                    label: 'Ver Detalle',
+                    icon: 'pi pi-eye',
+                    command: () => this.openDebt(event.item),
+                },
+            ];
+        }
+
+        // Filtramos manualmente los items para que solo los visibles lleguen al menú
+        this.menu.model = allItems;
         this.menu.toggle(event.event);
     }
 }

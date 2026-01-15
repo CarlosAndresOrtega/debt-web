@@ -91,8 +91,7 @@ import { MessageModule } from 'primeng/message';
                     <div class="z-10">
                         <h1 class="text-5xl font-bold mb-6">Bienvenido<br />Gestión de Deudas.</h1>
                         <p class="text-base mb-16 opacity-90">
-                            Explorá y gestioná fácilmente todo el catálogo de libros con nuestra aplicación. Visualizá datos actualizados, organizá tus búsquedas y accedé a herramientas avanzadas de scraping para encontrar lo que necesitás sin
-                            complicaciones.
+                        Explorá y administrá de forma sencilla todas tus deudas desde un solo lugar. Visualizá información actualizada, organizá tus registros y accedé a herramientas que te permiten llevar un control claro y eficiente de tus compromisos financieros, sin complicaciones.
                         </p>
 
                         <div class="flex items-center">

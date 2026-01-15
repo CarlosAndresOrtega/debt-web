@@ -51,16 +51,19 @@ import { AuthService } from '@/pages/auth/auth.service';
             </ng-template>
 
             <ng-template #footer>
-                <div class="flex gap-4 w-full">
-                    <p-button label="Descartar" [rounded]="true" (click)="onClose()" severity="secondary" class="flex-1" />
+                <div class="flex gap-4 w-full justify-end">
+                    <p-button label="Cerrar" [rounded]="true" (click)="onClose()" severity="secondary" />
 
-                    <ng-container *ngIf="isEditMode(); else createBtn">
+                    <ng-container *ngIf="isEditMode() && formGroup.disabled">
                         <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
                     </ng-container>
 
-                    <ng-template #createBtn>
-                        <p-button label="Guardar Deuda" [rounded]="true" styleClass="!bg-orange-500 !border-orange-500" class="flex-1" [disabled]="formGroup.invalid" (onClick)="saveDebt()" />
-                    </ng-template>
+                    <ng-container *ngIf="isEditMode() && !formGroup.disabled">
+                        <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
+                        <p-button label="Actualizar" [rounded]="true" styleClass="!bg-orange-500 !border-orange-500" [disabled]="formGroup.invalid" (onClick)="saveDebt()" />
+                    </ng-container>
+
+                    <p-button *ngIf="!isEditMode()" label="Guardar Deuda" [rounded]="true" styleClass="!bg-orange-500 !border-orange-500" [disabled]="formGroup.invalid" (onClick)="saveDebt()" />
                 </div>
             </ng-template>
         </p-drawer>
@@ -105,10 +108,10 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
 
     protected override onDataReceived(data: any): void {
         const debtId = this.getMetadataValue('Id');
-
+        const mode = this.getMetadataValue('mode');
         if (debtId) {
             this.isEditMode.set(true);
-            this.loadDebtData(debtId);
+            this.loadDebtData(debtId, mode);
         } else {
             this.isEditMode.set(false);
             this.formGroup.reset({ isPaid: false });
@@ -116,12 +119,12 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         }
     }
 
-    private loadDebtData(id: number) {
+    private loadDebtData(id: number, mode?: string) {
         this.debtsService.getDebtById(id).subscribe({
             next: (data: any) => {
                 this.formGroup.patchValue(data);
-                // REGLA: Si la deuda está pagada, se deshabilita el formulario
-                if (data.isPaid) {
+
+                if (data.isPaid || mode === 'view') {
                     this.formGroup.disable();
                 } else {
                     this.formGroup.enable();
@@ -131,28 +134,39 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         });
     }
 
+    // En drawer-form.ts -> saveDebt()
     saveDebt() {
         if (this.formGroup.invalid) return;
 
         const rawValue = this.formGroup.getRawValue();
+        const id = rawValue.id; // Extraemos el ID explícitamente
 
-        if (!rawValue.id) {
-            delete rawValue.id;
-        }
         const payload = {
             ...rawValue,
-            userId: this.authService.getCurrentUserId(),
+            userId: id ? rawValue.user?.userId || rawValue.userId : this.authService.getCurrentUserId(),
         };
 
-        const request = payload.id ? this.debtsService.updateDebt(payload.id, payload) : this.debtsService.createDebt(payload);
+        // Limpiamos objetos complejos para que el backend reciba solo IDs o primitivos
+        delete payload.user;
+        delete payload.paidByUser;
+
+        const request = id ? this.debtsService.updateDebt(id, payload) : this.debtsService.createDebt(payload);
 
         request.subscribe({
             next: () => {
-                this.messageService.add({ severity: 'success', detail: 'Deuda registrada correctamente' });
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Éxito',
+                    detail: id ? 'Deuda actualizada' : 'Deuda registrada',
+                });
                 this.onClose();
             },
             error: (err) => {
-                this.messageService.add({ severity: 'error', detail: err.error.message || 'Error al guardar' });
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error.message || 'Error al procesar la solicitud',
+                });
             },
         });
     }
