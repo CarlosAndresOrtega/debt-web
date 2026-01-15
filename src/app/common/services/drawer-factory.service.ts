@@ -46,20 +46,4 @@ export class DrawerFactory {
             }
         });
     }
-    // --- Tus métodos anteriores (Libros) ---
-    // openBookDrawer(config: Partial<any>): void {
-    //     this.drawerService.open<any>({
-    //         title: 'Libro',
-    //         ...config
-    //     });
-    // }
-    
-    // openBookView(book: any): void {
-    //     this.openBookDrawer({
-    //         key: 'book-drawer',
-    //         title: 'Detalle Libre',
-    //         data: book,
-    //         metadata: { Id: book.id, mode: 'view' }
-    //     });
-    // }
 }

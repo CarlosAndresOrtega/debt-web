@@ -35,7 +35,6 @@ import { AuthService } from '@/pages/auth/auth.service';
                 </li>
 
                 <li class="profile-item topbar-item">
-
                     <button
                         pButton
                         pRipple
@@ -56,7 +55,7 @@ import { AuthService } from '@/pages/auth/auth.service';
                     <ul class="topbar-menu active-topbar-menu !p-6 w-60 z-50 !hidden rounded shadow-md !bg-white dark:!bg-surface-800">
                         <li role="menuitem" class="!m-0">
                             <a
-                                (click)="authService.signOut();"
+                                (click)="authService.signOut()"
                                 href="auth/login"
                                 class="flex items-center hover:text-primary-500 duration-200"
                                 pStyleClass="@grandparent"
@@ -76,8 +75,18 @@ import { AuthService } from '@/pages/auth/auth.service';
 
             <button class="layout-sidebar-anchor z-20" type="button" (click)="onAnchorToggle()"></button>
         </div>
-        <div class="flex justify-center items-center w-full">
-            <img class="rounded-full h-48" src="/images/avatar-m-1.jpg" />
+        <div class="flex flex-col justify-center items-center w-full gap-4 mt-4">
+            <img class="rounded-full h-48 w-48 object-cover border-4 border-orange-500 shadow-lg" src="/images/avatar-m-1.jpg" />
+
+            @if (currentUser()) {
+                <div class="flex flex-col items-center gap-1">
+                    <span class="text-xl font-extrabold text-orange-500 uppercase tracking-wider"> {{ currentUser().firstName }} {{ currentUser().lastName }} </span>
+
+                    <span class="text-sm font-medium text-surface-600 dark:text-surface-400">
+                        {{ currentUser().email }}
+                    </span>
+                </div>
+            }
         </div>
         <div app-menu></div>
     `,
@@ -91,8 +100,9 @@ export class AppSidebar {
     router = inject(Router);
 
     layoutService = inject(LayoutService);
-    authService = inject(AuthService)
+    authService = inject(AuthService);
 
+    currentUser = computed(() => this.authService.user);
     @ViewChild(AppMenu) appMenu!: AppMenu;
 
     logo = computed(() => (this.layoutService.isDarkTheme() ? 'light' : 'dark'));

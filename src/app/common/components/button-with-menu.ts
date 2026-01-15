@@ -92,7 +92,6 @@ import { MenuItem } from 'primeng/api';
     ],
 })
 export class ButtonWithMenu {
-    // Button inputs
     @Input() buttonLabel: string = '';
     @Input() buttonIcon: string = '';
     @Input() buttonClass: string = 'text-surface-500 dark:text-surface-400';
@@ -101,14 +100,12 @@ export class ButtonWithMenu {
     @Input() buttonRounded: boolean = true;
     @Input() buttonStyle: any = '';
 
-    // Menu items
     @Input() menuItems: MenuItem[] | undefined = [];
 
     /**
      * Handle clicks on menu items
      */
     handleMenuItemClick(event: MouseEvent, item: MenuItem): void {
-        // If item has a command, execute it
         if (item.command) {
             item.command({
                 originalEvent: event,
@@ -116,13 +113,10 @@ export class ButtonWithMenu {
             });
         }
 
-        // If the item has a url, let the browser handle navigation
-        // If not, prevent default behavior
         if (!item.url) {
             event.preventDefault();
         }
 
-        // If item is disabled, prevent action
         if (item.disabled) {
             event.preventDefault();
         }

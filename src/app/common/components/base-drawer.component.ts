@@ -13,7 +13,6 @@ export abstract class BaseDrawerComponent<T = any> implements OnInit, OnDestroy 
     ngOnInit(): void {
         this.initializeForm();
         this.isInitialized.set(true);
-        // Do NOT call effect() here!
     }
 
     ngOnDestroy(): void {
@@ -22,7 +21,6 @@ export abstract class BaseDrawerComponent<T = any> implements OnInit, OnDestroy 
         }
     }
 
-    // Common lifecycle methods
     protected onClose(): void {
         this.resetForm();
         this.drawerService.close(this.key());
@@ -36,7 +34,6 @@ export abstract class BaseDrawerComponent<T = any> implements OnInit, OnDestroy 
     }
     
     protected resetForm(): void {
-        // Override in concrete classes if needed
     }
     
     protected getDrawerState(): DrawerState<T> {
@@ -61,13 +58,11 @@ export abstract class BaseDrawerComponent<T = any> implements OnInit, OnDestroy 
         }
     }
     
-    // Abstract methods to be implemented by concrete classes
     protected abstract initializeForm(): void;
     protected abstract onDataReceived(data: T): void;
     protected abstract validateForm(): boolean;
     protected abstract getFormData(): T;
     
-    // Properties that concrete classes must provide
     protected abstract drawerService: DrawerService;
     protected abstract messageService: MessageService;
     protected abstract key: InputSignal<string | undefined>;

@@ -54,20 +54,15 @@ import { AppTopbar } from '@/layout/components/app.topbar';
     `,
 })
 export class PageHeader {
-    // Input signal for title
     title = input<string>('Page Title');
     inline = input<boolean>(false);
 
-    // Services
     layoutService = inject(LayoutService);
 
-    // Mobile responsiveness
     showFilters: boolean = false;
 
-    // Output for clearing filters
     clearFilters = output();
 
-    // Content projection for actions (buttons), search, and filters
     @ContentChild('actionsTemplate') actionsTemplate?: TemplateRef<any>;
     @ContentChild('searchTemplate') searchTemplate?: TemplateRef<any>;
     @ContentChild('filtersTemplate') filtersTemplate?: TemplateRef<any>;

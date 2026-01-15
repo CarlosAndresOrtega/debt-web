@@ -6,7 +6,7 @@ export interface BaseDrawerConfig<T = any> {
     data?: T;
     onClose?: () => void;
     onSave?: (data: T) => void;
-    metadata?: Record<string, any>; // For flexible additional properties
+    metadata?: Record<string, any>; 
 }
 
 export interface DrawerState<T = any> {
@@ -21,7 +21,6 @@ export interface DrawerState<T = any> {
 @Injectable({ providedIn: 'root' })
 export class DrawerService {
     private defaultDrawer: DrawerState = this.createState();
-    // mapas de drawers adicionales
     private drawers = new Map<string, DrawerState>();
 
     private createState<T = any>(): DrawerState<T> {
@@ -45,7 +44,6 @@ export class DrawerService {
         return this.drawers.get(key)! as DrawerState<T>;
     }
 
-    // Generic open method
     open<T = any>(config: BaseDrawerConfig<T>): void {
         const state = this.getDrawer<T>(config.key);
         state.title.set(config.title);
@@ -97,7 +95,6 @@ export class DrawerService {
         state.onSave = () => {};
     }
 
-    // accesos directos para el drawer por defecto
     get visible() {
         return this.defaultDrawer.visible;
     }

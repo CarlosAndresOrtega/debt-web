@@ -12,32 +12,19 @@ import { TagModule } from 'primeng/tag';
 import { DrawerService } from '@/common/services/drawer.service';
 import { BaseDrawerComponent } from '@/common/components/base-drawer.component';
 import { DebtsService } from '../debts.service';
+import { AuthService } from '@/pages/auth/auth.service';
 
 @Component({
-    selector: 'drawer-debt', // Selector limpio
+    selector: 'drawer-debt',
     standalone: true,
-    imports: [
-        CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, 
-        InputGroupModule, InputGroupAddonModule, DrawerModule, 
-        ButtonModule, ToastModule, TagModule
-    ],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, InputGroupModule, InputGroupAddonModule, DrawerModule, ButtonModule, ToastModule, TagModule],
     template: `
-        <p-drawer 
-            [visible]="isDrawerVisible()" 
-            position="right" 
-            [header]="getDrawerState().title()" 
-            [modal]="true" 
-            styleClass="!w-full md:!w-80 lg:!w-[30rem]" 
-            (onHide)="onClose()">
-            
+        <p-drawer [visible]="isDrawerVisible()" position="right" [header]="getDrawerState().title()" [modal]="true" styleClass="!w-full md:!w-80 lg:!w-[30rem]" (onHide)="onClose()">
             <ng-template #content>
                 <form class="flex flex-col gap-6 p-4" *ngIf="formGroup" [formGroup]="formGroup">
-                    <div *ngIf="isEditMode()" class="flex justify-between items-center bg-surface-50 dark:bg-surface-800 p-3 rounded-lg">
+                    <div *ngIf="isEditMode()" class="flex justify-between items-center ...">
                         <span class="text-sm font-medium">Estado actual:</span>
-                        <p-tag 
-                            [severity]="formGroup.get('isPaid')?.value ? 'success' : 'warn'" 
-                            [value]="formGroup.get('isPaid')?.value ? 'PAGADA' : 'PENDIENTE'">
-                        </p-tag>
+                        <p-tag [severity]="formGroup.get('isPaid')?.value ? 'success' : 'warn'" [value]="formGroup.get('isPaid')?.value ? 'PAGADA' : 'PENDIENTE'"> </p-tag>
                     </div>
 
                     <div class="flex flex-col gap-2">
@@ -51,9 +38,7 @@ import { DebtsService } from '../debts.service';
                             <p-inputGroupAddon>$</p-inputGroupAddon>
                             <input pInputText id="amount" formControlName="amount" type="number" placeholder="0.00" />
                         </p-inputGroup>
-                        <small class="text-red-500" *ngIf="formGroup.get('amount')?.invalid && formGroup.get('amount')?.dirty">
-                            El monto debe ser un valor positivo mayor a 0.
-                        </small>
+                        <small class="text-red-500" *ngIf="formGroup.get('amount')?.invalid && formGroup.get('amount')?.dirty"> El monto debe ser un valor positivo mayor a 0. </small>
                     </div>
 
                     <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg" *ngIf="formGroup.disabled">
@@ -66,22 +51,19 @@ import { DebtsService } from '../debts.service';
             </ng-template>
 
             <ng-template #footer>
-                <div class="flex gap-4 w-full">
-                    <p-button label="Descartar" [rounded]="true" (click)="onClose()" severity="secondary" class="flex-1" />
-                    
-                    <ng-container *ngIf="isEditMode(); else createBtn">
-                         <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
+                <div class="flex gap-4 w-full justify-end">
+                    <p-button label="Cerrar" [rounded]="true" (click)="onClose()" severity="secondary" />
+
+                    <ng-container *ngIf="isEditMode() && formGroup.disabled">
+                        <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
                     </ng-container>
 
-                    <ng-template #createBtn>
-                        <p-button 
-                            label="Guardar Deuda" 
-                            [rounded]="true" 
-                            styleClass="!bg-orange-500 !border-orange-500"
-                            class="flex-1" 
-                            [disabled]="formGroup.invalid"
-                            (onClick)="saveDebt()" />
-                    </ng-template>
+                    <ng-container *ngIf="isEditMode() && !formGroup.disabled">
+                        <ng-container *ngTemplateOutlet="actionsTemplate ?? null"></ng-container>
+                        <p-button label="Actualizar" [rounded]="true" styleClass="!bg-orange-500 !border-orange-500" [disabled]="formGroup.invalid" (onClick)="saveDebt()" />
+                    </ng-container>
+
+                    <p-button *ngIf="!isEditMode()" label="Guardar Deuda" [rounded]="true" styleClass="!bg-orange-500 !border-orange-500" [disabled]="formGroup.invalid" (onClick)="saveDebt()" />
                 </div>
             </ng-template>
         </p-drawer>
@@ -93,6 +75,7 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
     drawerService = inject(DrawerService);
     messageService = inject(MessageService);
     debtsService = inject(DebtsService);
+    authService = inject(AuthService);
     fb = inject(FormBuilder);
 
     formGroup!: FormGroup;
@@ -118,17 +101,17 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         this.formGroup = this.fb.group({
             id: [null],
             description: ['', [Validators.required, Validators.minLength(3)]],
-            amount: [null, [Validators.required, Validators.min(0.01)]], // Validación de monto positivo
-            isPaid: [false]
+            amount: [null, [Validators.required, Validators.min(0.01)]],
+            isPaid: [false],
         });
     }
 
     protected override onDataReceived(data: any): void {
         const debtId = this.getMetadataValue('Id');
-
+        const mode = this.getMetadataValue('mode');
         if (debtId) {
             this.isEditMode.set(true);
-            this.loadDebtData(debtId);
+            this.loadDebtData(debtId, mode);
         } else {
             this.isEditMode.set(false);
             this.formGroup.reset({ isPaid: false });
@@ -136,35 +119,60 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         }
     }
 
-    private loadDebtData(id: number) {
+    private loadDebtData(id: number, mode?: string) {
         this.debtsService.getDebtById(id).subscribe({
             next: (data: any) => {
                 this.formGroup.patchValue(data);
-                // REGLA: Si la deuda está pagada, se deshabilita el formulario
-                if (data.isPaid) {
+
+                if (data.isPaid || mode === 'view') {
                     this.formGroup.disable();
                 } else {
                     this.formGroup.enable();
                 }
             },
-            error: (err) => console.error('Error al cargar la deuda:', err)
+            error: (err) => console.error('Error al cargar la deuda:', err),
         });
     }
 
     saveDebt() {
         if (this.formGroup.invalid) return;
-        
-        const payload = this.formGroup.getRawValue();
-        this.debtsService.createDebt(payload).subscribe({
+
+        const rawValue = this.formGroup.getRawValue();
+        const id = rawValue.id;
+
+        const payload = {
+            ...rawValue,
+            userId: id ? rawValue.user?.userId || rawValue.userId : this.authService.getCurrentUserId(),
+        };
+
+        delete payload.user;
+        delete payload.paidByUser;
+
+        const request = id ? this.debtsService.updateDebt(id, payload) : this.debtsService.createDebt(payload);
+
+        request.subscribe({
             next: () => {
-                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Deuda registrada correctamente' });
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Éxito',
+                    detail: id ? 'Deuda actualizada' : 'Deuda registrada',
+                });
                 this.onClose();
-                // Aquí deberías refrescar la tabla en el container
             },
-            error: (err) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error.message })
+            error: (err) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error.message || 'Error al procesar la solicitud',
+                });
+            },
         });
     }
 
-    protected override validateForm(): boolean { return this.formGroup?.valid; }
-    protected override getFormData(): any { return this.formGroup?.getRawValue(); }
+    protected override validateForm(): boolean {
+        return this.formGroup?.valid;
+    }
+    protected override getFormData(): any {
+        return this.formGroup?.getRawValue();
+    }
 }

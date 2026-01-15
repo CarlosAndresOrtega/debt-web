@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, effect, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { PageHeader } from '../../common/components/header';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -7,7 +7,6 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { Table, TableModule } from 'primeng/table';
 import { ToolbarModule } from 'primeng/toolbar';
-// import { debtsService } from './debts.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { DrawerModule } from 'primeng/drawer';
 import { LayoutService } from '@/layout/service/layout.service';
@@ -34,11 +33,12 @@ import { ConfirmationModalService } from '@/common/services/confirmation-modal.s
 import { DrawerService } from '@/common/services/drawer.service';
 import { DrawerFactory } from '@/common/services/drawer-factory.service';
 import { DebtsService } from './debts.service';
-import { Book } from './interface/book.model';
 import { DrawerDebt } from './drawer/drawer-form';
 import { debtList } from '@/common/components/list';
 import { Dropdown, DropdownModule } from 'primeng/dropdown';
 import { UsersService } from './users.service';
+import { AuthService } from '../auth/auth.service';
+import { Debt } from './interface/debt.model';
 
 @Component({
     selector: 'debts-container',
@@ -50,6 +50,7 @@ import { UsersService } from './users.service';
                 <page-header [title]="'Deudas'">
                     <ng-template #actionsTemplate>
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                            <p-button label="Exportar CSV" icon="pi pi-file-excel" rounded="true" severity="secondary" (onClick)="downloadCsv()" />
                             <p-button label="Nueva Deuda" icon="pi pi-plus" rounded="true" styleClass="p-button-primary !bg-orange-500 !border-orange-500 !text-white w-full sm:w-auto" (onClick)="openCreateDebt()"> </p-button>
                         </div>
                     </ng-template>
@@ -70,6 +71,17 @@ import { UsersService } from './users.service';
                                     <div class="flex flex-col justify-between items-start gap-1">
                                         <span class="font-medium text-secondary text-lg">{{ item.description }}</span>
                                         <span class="text-sm text-surface-500 italic">{{ item.createdAt | date: 'short' }}</span>
+                                        <div class="flex items-center gap-1.5 text-sm text-surface-600">
+                                            <span class="font-semibold text-xs uppercase tracking-wider text-surface-400">Dueño:</span>
+                                            <span>{{ item.user?.firstName }} {{ item.user?.lastName }}</span>
+                                        </div>
+
+                                        @if (item.isPaid && item.paidByUser) {
+                                            <div class="flex items-center gap-1.5 text-sm text-green-600 mt-0.5">
+                                                <span class="font-semibold text-xs uppercase tracking-wider text-green-400">Pagado por:</span>
+                                                <span class="font-medium">{{ item.paidByUser?.firstName }} {{ item.paidByUser?.lastName }}</span>
+                                            </div>
+                                        }
                                     </div>
 
                                     <div class="flex items-center gap-6">
@@ -80,7 +92,7 @@ import { UsersService } from './users.service';
                                             <p-tag [severity]="item.isPaid ? 'success' : 'warn'" [value]="item.isPaid ? 'Pagada' : 'Pendiente'"></p-tag>
                                         </div>
 
-                                        <button type="button" class="text-surface-500 dark:text-surface-300" (click)="openDebt(item)">
+                                        <button type="button" (click)="handleMenuClick({ event: $event, item: item })">
                                             <i class="pi pi-chevron-right text-xl"></i>
                                         </button>
                                     </div>
@@ -94,16 +106,18 @@ import { UsersService } from './users.service';
                     </debts-list>
                 </div>
 
+                <p-menu #responsiveMenu [popup]="true" appendTo="body"></p-menu>
+
                 <div class="sticky bottom-0 bg-white dark:bg-surface-900">
                     <p-paginator (onPageChange)="onPageChange($event)" [first]="first" [rows]="pagination().pageSize" [totalRecords]="pagination().totalItems" [rowsPerPageOptions]="[10, 20, 30]" />
                 </div>
 
                 <drawer-debt [key]="'debt-drawer'">
-                    <ng-template #actionsTemplate>
+                    <!-- <ng-template #actionsTemplate>
                         <div class="w-full flex justify-end gap-5">
-                            <p-button label="Eliminar" [rounded]="true" (click)="confirmDeletebook(debtselected())" severity="danger" />
+                            <p-button label="Eliminar" [rounded]="true" (click)="confirmDeleteDebt(debtselected())" severity="danger" />
                         </div>
-                    </ng-template>
+                    </ng-template> -->
                 </drawer-debt>
             </div>
         </div>
@@ -148,6 +162,7 @@ export class DebtsContainer implements OnInit {
 
     @ViewChild('dt') dt!: Table;
     @ViewChild('menu') menu!: Menu;
+    @ViewChild('responsiveMenu') responsiveMenu!: Menu;
 
     layoutService = inject(LayoutService);
     debtsService = inject(DebtsService);
@@ -159,9 +174,10 @@ export class DebtsContainer implements OnInit {
     drawerService = inject(DrawerService);
     drawerFactory = inject(DrawerFactory);
     usersService = inject(UsersService);
+    private authService = inject(AuthService);
 
-    debts = signal<Book[]>([]);
-    debtselected = signal<Book>({} as Book);
+    debts = signal<Debt[]>([]);
+    debtselected = signal<Debt>({} as Debt);
 
     pagination = signal({ currentPage: 1, pageSize: 10, totalItems: 0 });
     filters = signal<any[]>([]);
@@ -177,7 +193,7 @@ export class DebtsContainer implements OnInit {
         { field: 'createdAt', header: 'Fecha Registro', customComponent: 'date' },
     ];
 
-    bookToDelete = signal<any>(undefined);
+    debtToDelete = signal<any>(undefined);
     deletebookDialog = false;
     deleteSelecteddebtsDialog = false;
 
@@ -189,7 +205,14 @@ export class DebtsContainer implements OnInit {
     selectedPage = 1;
     users = signal<any[]>([]);
 
-    constructor() {}
+    constructor() {
+        effect(() => {
+            const isVisible = this.drawerService.getState('debt-drawer').visible();
+            if (!isVisible) {
+                this.getData();
+            }
+        });
+    }
 
     ngOnInit() {
         this.qpService.clearParams();
@@ -197,11 +220,9 @@ export class DebtsContainer implements OnInit {
     }
 
     async loadInitialData() {
-        // 1. Primero cargamos los usuarios
         this.usersService.getAll().subscribe({
             next: (data) => {
                 this.users.set(data);
-                // 2. Una vez tenemos los usuarios, cargamos los filtros
                 this.getFilters();
             },
         });
@@ -219,8 +240,7 @@ export class DebtsContainer implements OnInit {
             next: (data) => {
                 this.debts.set(data.items);
                 this.pagination.set(data.pagination);
-    
-                // Buscamos el monto máximo en la data recibida
+
                 if (data.items.length > 0) {
                     const maxAmount = Math.max(...data.items.map((item: any) => item.amount));
                     this.updateSliderMax(maxAmount);
@@ -230,19 +250,15 @@ export class DebtsContainer implements OnInit {
         });
     }
     updateSliderMax(newMax: number) {
-        this.filters.update(currentFilters => 
-            currentFilters.map(f => f.queryParam === 'amount' ? { ...f, max: Math.ceil(newMax) } : f)
-        );
+        this.filters.update((currentFilters) => currentFilters.map((f) => (f.queryParam === 'amount' ? { ...f, max: Math.ceil(newMax) } : f)));
     }
 
     getFilters() {
-        // 1. Mapeamos las opciones de usuario
         const userOptions = this.users().map((u) => ({
             id: u.userId,
             name: `${u.firstName} ${u.lastName}`,
         }));
 
-        // 2. Definimos la configuración completa de filtros
         const staticFilters = [
             {
                 name: 'Estado',
@@ -271,7 +287,6 @@ export class DebtsContainer implements OnInit {
             },
         ];
 
-        // 3. Procesamos para marcar seleccionados según la URL
         const preparedFilters = this.qpService.prepareFilters(staticFilters);
         this.filters.set(preparedFilters);
     }
@@ -285,55 +300,42 @@ export class DebtsContainer implements OnInit {
         this.searchTimeout = setTimeout(async () => {
             await this.qpService.updateParams({ description: value, page: 1 });
             this.getData();
-        }, 400); // Espera 400ms después de dejar de escribir
+        }, 400);
     }
 
     openBook(item: any) {
         this.debtselected.set(item);
-        // this.drawerFactory.openBookView(item);
     }
 
-    confirmDeletebook(book: any) {
-        this.bookToDelete.set(book);
+    confirmDeleteDebt(item: any) {
+        this.debtToDelete.set(item);
         this.confirmationModalService
             .confirm({
-                header: 'Borrar Libro',
-                message: '¿Estás seguro de querer eliminar este libro?',
+                header: 'Confirmar Eliminación',
+                message: `¿Estás seguro de eliminar la deuda "${item.description}"?`,
                 icon: 'pi pi-exclamation-triangle',
-                acceptLabel: 'Si',
+                acceptLabel: 'Si, eliminar',
                 rejectLabel: 'No',
                 severity: 'error',
             })
             .then((confirmed) => {
                 if (confirmed) {
-                    this.deleteSingleBook();
+                    this.debtsService.delete(item.id).subscribe({
+                        next: () => {
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Eliminada',
+                                detail: 'La deuda ha sido removida',
+                            });
+                            this.getData();
+                        },
+                    });
                 }
             });
     }
 
     deleteSingleBook() {
-        if (!this.bookToDelete()) return;
-
-        // this.debtsService.deleteBook(this.bookToDelete().id).subscribe({
-        //     next: () => {
-        //         this.drawerService.close('book-drawer');
-
-        //         this.messageService.add({
-        //             severity: 'success',
-        //             summary: 'Eliminado',
-        //             detail: 'Libro eliminado con éxito',
-        //         });
-        //         this.getData();
-        //     },
-        //     error: (error) => {
-        //         this.messageService.add({
-        //             severity: 'error',
-        //             summary: 'Error',
-        //             detail: 'Ocurrió un error al eliminar el libro',
-        //         });
-        //         console.error('Error deleting book:', error);
-        //     },
-        // });
+        if (!this.debtToDelete()) return;
     }
 
     async onPageChange(event: PaginatorState) {
@@ -359,22 +361,17 @@ export class DebtsContainer implements OnInit {
                 await this.qpService.removeParams([queryParam]);
             }
         } else {
-            // CASO ESPECIAL: Rango de Monto (Slider)
             if (queryParam === 'amount' && Array.isArray(selectedItem)) {
                 await this.qpService.updateParams({
                     amountMin: selectedItem[0],
                     amountMax: selectedItem[1],
                 });
-            }
-            // CASO ESPECIAL: Rango de Fechas
-            else if (queryParam === 'dateRange') {
+            } else if (queryParam === 'dateRange') {
                 await this.qpService.updateParams({
                     dateFrom: selectedItem.dateFrom,
                     dateTo: selectedItem.dateTo,
                 });
-            }
-            // CASO GENERAL: Dropdowns (id) o Buscador (query)
-            else {
+            } else {
                 await this.qpService.updateParams({
                     [queryParam]: selectedItem.id || selectedItem,
                 });
@@ -390,7 +387,6 @@ export class DebtsContainer implements OnInit {
             .filter((f) => f.type === 'slider' || !f.values)
             .flatMap((f) => [`${f.queryParam}Min`, `${f.queryParam}Max`]);
 
-        // 2. Recolectamos las llaves de selectores simples
         const selectParams = this.filters()
             .filter((f) => f.values)
             .map((f) => f.queryParam);
@@ -407,52 +403,80 @@ export class DebtsContainer implements OnInit {
     }
 
     openCreateDebt() {
-        this.debtselected.set({} as any); // Limpiamos selección
-        this.drawerFactory.openDebtForm(null); // Llamamos al factory para crear
+        this.debtselected.set({} as any);
+        this.drawerFactory.openDebtCreate();
     }
 
-    // Detalle al hacer click en la flecha o el menú
     openDebt(item: any) {
         this.debtselected.set(item);
-        this.drawerFactory.openDebtView(item); // Modo lectura/edición
+        this.drawerFactory.openDebtView(item);
+    }
+    openEditDebt(item: any) {
+        this.debtselected.set(item);
+        this.drawerService.open<any>({
+            key: 'debt-drawer',
+            title: `Editar: ${item.description}`,
+            data: item,
+            metadata: {
+                Id: item.id,
+                mode: 'edit',
+            },
+        });
     }
 
     markAsPaid(item: any) {
         if (item.isPaid) return;
+        const currentUserId = this.authService.getCurrentUserId();
 
-        this.debtsService.markAsPaid(item.id).subscribe({
+        this.debtsService.markAsPaid(item.id, currentUserId).subscribe({
             next: () => {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Pagada',
                     detail: 'La deuda se marcó como pagada',
                 });
-                this.getData(); // Refrescar lista
+                this.getData();
             },
-            error: (err) => console.error(err),
+            error: (err) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'No se pudo procesar el pago',
+                });
+            },
         });
     }
 
     handleMenuClick(event: { event: Event; item: any }) {
-        const menuItems = [
-            {
-                label: 'Ver Detalle',
-                icon: 'pi pi-eye',
-                command: () => this.openDebt(event.item),
+        if (!this.responsiveMenu) return;
+
+        const isPaid = event.item.isPaid;
+        let allItems: MenuItem[] = [];
+
+        if (!isPaid) {
+            allItems = [
+                { label: 'Editar', icon: 'pi pi-pencil', command: () => this.openEditDebt(event.item) },
+                { label: 'Marcar como Pagada', icon: 'pi pi-check', styleClass: 'text-green-500', command: () => this.markAsPaid(event.item) },
+                { label: 'Eliminar', icon: 'pi pi-trash', styleClass: 'text-red-500', command: () => this.confirmDeleteDebt(event.item) },
+            ];
+        } else {
+            allItems = [{ label: 'Ver Detalle', icon: 'pi pi-eye', command: () => this.openDebt(event.item) }];
+        }
+
+        this.responsiveMenu.model = allItems;
+        this.responsiveMenu.toggle(event.event);
+    }
+    downloadCsv() {
+        this.debtsService.exportCsv(this.qpService.queryParams()).subscribe({
+            next: (blob) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reporte_deudas_${Date.now()}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
             },
-            {
-                label: 'Marcar como Pagada',
-                icon: 'pi pi-check',
-                visible: !event.item.isPaid, // Solo si está pendiente
-                command: () => this.markAsPaid(event.item),
-            },
-            {
-                label: 'Eliminar',
-                icon: 'pi pi-trash',
-                command: () => this.confirmDeletebook(event.item),
-            },
-        ];
-        this.menu.model = menuItems;
-        this.menu.toggle(event.event);
+            error: () => this.messageService.add({ severity: 'error', detail: 'Error al exportar' }),
+        });
     }
 }

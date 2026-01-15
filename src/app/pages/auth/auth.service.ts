@@ -32,6 +32,9 @@ export class AuthService {
     set refreshToken(token: string) {
         localStorage.setItem('refreshToken', token);
     }
+    set user(user: any) {
+        localStorage.setItem('user', JSON.stringify(user));
+    }
 
     get accessToken(): string {
         return localStorage.getItem('accessToken') ?? '';
@@ -45,12 +48,25 @@ export class AuthService {
     get verifyResponse$(): Observable<any> {
         return this._verifyResponse.asObservable();
     }
+    get user(): any {
+        const user = localStorage.getItem('user');
+        if (!user || user === 'undefined') {
+            return null;
+        }
+        try {
+            return JSON.parse(user);
+        } catch (e) {
+            return null;
+        }
+    }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-   
+    getCurrentUserId(): string {
+        return this.user?.userId || '';
+    }
 
     /**
      * Sign in
@@ -58,7 +74,6 @@ export class AuthService {
      * @param credentials
      */
     signIn(credentials: { email: string; password: string }): Observable<any> {
-        // Throw error, if the user is already logged in
         if (this._authenticated) {
             return throwError('User is already logged in.');
         }
@@ -69,6 +84,7 @@ export class AuthService {
             switchMap((response: any) => {
                 this.accessToken = response.access_token; 
                 this.refreshToken = response.refresh_token ?? null;
+                this.user = response.user;
                 this.sesssionId = uuidv4();
 
                 localStorage.setItem('accessToken', this.accessToken);
@@ -124,17 +140,15 @@ export class AuthService {
      * Sign out
      */
     signOut(): Observable<any> {
-        // Remove the access token from the local storage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         localStorage.removeItem('user-roles');
         localStorage.removeItem('user-permissions');
         localStorage.removeItem('sessionId');
-        // Set the authenticated flag to false
         this._authenticated = false;
 
         this._router.navigate(['/auth/login']);
-        // Return the observable
         return of(true);
     }
 

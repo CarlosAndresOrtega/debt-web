@@ -1,6 +1,5 @@
 import { BaseDrawerConfig } from '../services/drawer.service';
 
-// Client-related interfaces
 export interface ClientData {
     id?: number;
     nombres: string;
@@ -39,7 +38,6 @@ export interface ClientDrawerConfig extends BaseDrawerConfig<ClientData> {
     };
 }
 
-// Sales-related interfaces
 export interface SalesData {
     id?: number;
     clientId: number;
@@ -62,7 +60,6 @@ export interface SalesDrawerConfig extends BaseDrawerConfig<SalesData> {
     };
 }
 
-// Collections-related interfaces
 export interface CollectionData {
     id?: number;
     collectionId?: number;
@@ -99,7 +96,6 @@ export interface CollectionDrawerConfig extends BaseDrawerConfig<CollectionData>
     };
 }
 
-// Receipt-related interfaces
 export interface ReceiptData {
     id?: number;
     amount: string;
@@ -126,7 +122,6 @@ export interface ReceiptDrawerConfig extends BaseDrawerConfig<ReceiptData> {
     };
 }
 
-// Article-related interfaces
 export interface ArticleData {
     id?: number;
     name: string;

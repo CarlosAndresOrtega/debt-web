@@ -136,7 +136,6 @@ export class debtList {
      */
     selectedRows = signal<any[]>([]);
 
-    // TODO: add removable sorting
     onSortHandler(event: any) {
         const sort = event.multisortmeta.map((elem: any) => {
             return `${elem.field}:${elem.order === 1 ? 'ASC' : 'DESC'}`;

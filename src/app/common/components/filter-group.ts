@@ -100,7 +100,6 @@ import { debounceTime, Subject, takeUntil } from 'rxjs';
     ],
 })
 export class FilterGroup implements OnInit {
-    // TODO: remove when we have global configurations
     pillSelect = {
         root: {
             borderRadius: '24px',
@@ -108,7 +107,6 @@ export class FilterGroup implements OnInit {
     };
 
     filters = input([], {
-        // Trigger updateSelectedValues whenever filters change
         transform: (value: any) => {
             setTimeout(() => this.updateSelectedValues(), 0);
             return value;
@@ -120,11 +118,9 @@ export class FilterGroup implements OnInit {
     searchQuery: string = '';
     private searchSubject = new Subject<string>();
     private destroy$ = new Subject<void>();
-    // Add input for preselected values from query params
     queryParams = input(
         {},
         {
-            // Trigger updateSelectedValues whenever queryParams change
             transform: (value) => {
                 setTimeout(() => this.updateSelectedValues(), 0);
                 return value;
@@ -136,20 +132,17 @@ export class FilterGroup implements OnInit {
 
     protected selectedValues = signal<Record<string, any>>({});
 
-    // Date range model
     dateRange: Date[] | null = null;
 
     selectedRanges: Record<string, [number, number]> = {};
 
     ngOnInit() {
-        // Initialize selected values from query params
         this.updateSelectedValues();
         this.initDateRangeFromQueryParams();
 
         const params: any = this.queryParams();
         if (params?.query) this.searchQuery = params.query;
 
-        // Configurar Debounce para el buscador
         this.searchSubject.pipe(
             debounceTime(400),
             takeUntil(this.destroy$)
@@ -166,7 +159,6 @@ export class FilterGroup implements OnInit {
         this.destroy$.next();
         this.destroy$.complete();
     }
-    // Initialize date range from query params if they exist
     private initDateRangeFromQueryParams() {
         const params: any = this.queryParams();
         if (!params) {
@@ -178,14 +170,11 @@ export class FilterGroup implements OnInit {
 
         if (dateFrom && dateTo) {
             try {
-                // Parse dates with explicit parts to avoid timezone issues
                 const fromParts = dateFrom.split('-').map(Number);
                 const toParts = dateTo.split('-').map(Number);
 
-                // Create dates with year, month (0-indexed), day to preserve the exact day
                 this.dateRange = [new Date(fromParts[0], fromParts[1] - 1, fromParts[2]), new Date(toParts[0], toParts[1] - 1, toParts[2])];
 
-                // Add to selected values for tracking
                 this.selectedValues.update((current) => ({
                     ...current,
                     dateRange: { dateFrom, dateTo },
@@ -197,7 +186,6 @@ export class FilterGroup implements OnInit {
         }
     }
 
-    // This is called when the queryParams input changes
     private updateSelectedValues() {
         const params: any = this.queryParams();
         const filtersArray: any = this.filters();
@@ -206,9 +194,7 @@ export class FilterGroup implements OnInit {
             return;
         }
 
-        // For each filter, find its preselected value if exists in query params
         filtersArray.forEach((filter: any) => {
-            // Si es un filtro con opciones (dropdown)
             if (filter.values) {
                 const paramValue = params[filter.queryParam];
                 if (paramValue !== undefined && paramValue !== null) {
@@ -222,7 +208,6 @@ export class FilterGroup implements OnInit {
                     }
                 }
             } else {
-                // Si es un filtro tipo rango (slider)
                 const minParam = params[`${filter.queryParam}Min`];
                 const maxParam = params[`${filter.queryParam}Max`];
 
@@ -239,26 +224,22 @@ export class FilterGroup implements OnInit {
                         }));
                     }
                 } else {
-                    // Si no hay valores en query params, usa rango completo
                     this.selectedRanges[filter.queryParam] = [filter.min, filter.max];
                 }
             }
         });
     }
 
-    // Get the selected value for a specific filter
     getSelectedValue(filter: any) {
         const values = this.selectedValues();
         return values[filter.queryParam] || null;
     }
 
-    // Check if there are any selected filters or date range
     hasSelectedFilters(): boolean {
         return Object.keys(this.selectedValues()).length > 0 || (this.dateRange !== null && this.dateRange.length > 0);
     }
 
     onFilterSelect(queryParam: string, selectedItem: any) {
-        // Update internal state
         this.selectedValues.update((current) => ({
             ...current,
             [queryParam]: selectedItem,
@@ -272,25 +253,19 @@ export class FilterGroup implements OnInit {
             });
         }
 
-        // Emit the change
         this.selectedFilters.emit({ queryParam, selectedItem });
     }
 
-    // Handle date range selection
     onDateRangeSelect() {
         if (this.dateRange && this.dateRange.length === 2 && this.dateRange[0] && this.dateRange[1]) {
-            // Let the calendar handle the formatting through its dateFormat property
-            // We just need to get the dates in ISO format for the API
             const dateFrom = this.dateToISO(this.dateRange[0]);
             const dateTo = this.dateToISO(this.dateRange[1]);
 
-            // Store in selected values for tracking
             this.selectedValues.update((current) => ({
                 ...current,
                 dateRange: { dateFrom, dateTo },
             }));
 
-            // Emit both date parameters in a single event
             this.selectedFilters.emit({
                 queryParam: 'dateRange',
                 selectedItem: { dateFrom, dateTo },
@@ -298,42 +273,35 @@ export class FilterGroup implements OnInit {
         }
     }
 
-    // Convert date to ISO format string (YYYY-MM-DD)
     private dateToISO(date: Date | null): string {
         if (!date) {
             return '';
         }
-        // Use local date parts to avoid timezone issues
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
 
-    // Handle date range clear
     onDateRangeClear() {
         this.dateRange = null;
 
-        // Remove from selected values
         this.selectedValues.update((current) => {
             const updated = { ...current };
             delete updated['dateRange'];
             return updated;
         });
 
-        // Emit clear event
         this.selectedFilters.emit({
             queryParam: 'dateRange',
             selectedItem: null,
         });
     }
 
-    // Handle clear filters button click
     onClearFilters() {
         this.searchQuery = '';
         this.dateRange = null;
         
-        // Resetear los sliders a su rango original
         this.filters().forEach((filter: any) => {
             if (filter.type === 'slider') {
                 this.selectedRanges[filter.queryParam] = [filter.min, filter.max];
