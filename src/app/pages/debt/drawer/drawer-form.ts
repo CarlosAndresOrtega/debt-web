@@ -119,7 +119,7 @@ export class DrawerDebt extends BaseDrawerComponent<any> {
         }
     }
 
-    private loadDebtData(id: number, mode?: string) {
+    private loadDebtData(id: string, mode?: string) {
         this.debtsService.getDebtById(id).subscribe({
             next: (data: any) => {
                 this.formGroup.patchValue(data);
