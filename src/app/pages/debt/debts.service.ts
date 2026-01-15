@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { debtsResponse } from './interface/book.model';
+import { DebtsResponse } from './interface/debt.model';
 
 @Injectable({
     providedIn: 'root',
@@ -11,9 +11,9 @@ import { debtsResponse } from './interface/book.model';
 export class DebtsService {
     private _http = inject(HttpClient);
 
-    getAll(queryparams?: Record<string, any>): Observable<debtsResponse> {
+    getAll(queryparams?: Record<string, any>): Observable<DebtsResponse> {
         const httpParams = mapQueryParams(queryparams);
-        return this._http.get<debtsResponse>(`${environment.baseUrl}/debts`, { params: httpParams });
+        return this._http.get<DebtsResponse>(`${environment.baseUrl}/debts`, { params: httpParams });
     }
 
     getDebtById(id: any): Observable<any> {

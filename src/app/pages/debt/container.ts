@@ -33,12 +33,12 @@ import { ConfirmationModalService } from '@/common/services/confirmation-modal.s
 import { DrawerService } from '@/common/services/drawer.service';
 import { DrawerFactory } from '@/common/services/drawer-factory.service';
 import { DebtsService } from './debts.service';
-import { Book } from './interface/book.model';
 import { DrawerDebt } from './drawer/drawer-form';
 import { debtList } from '@/common/components/list';
 import { Dropdown, DropdownModule } from 'primeng/dropdown';
 import { UsersService } from './users.service';
 import { AuthService } from '../auth/auth.service';
+import { Debt } from './interface/debt.model';
 
 @Component({
     selector: 'debts-container',
@@ -176,8 +176,8 @@ export class DebtsContainer implements OnInit {
     usersService = inject(UsersService);
     private authService = inject(AuthService);
 
-    debts = signal<Book[]>([]);
-    debtselected = signal<Book>({} as Book);
+    debts = signal<Debt[]>([]);
+    debtselected = signal<Debt>({} as Debt);
 
     pagination = signal({ currentPage: 1, pageSize: 10, totalItems: 0 });
     filters = signal<any[]>([]);
@@ -193,7 +193,7 @@ export class DebtsContainer implements OnInit {
         { field: 'createdAt', header: 'Fecha Registro', customComponent: 'date' },
     ];
 
-    bookToDelete = signal<any>(undefined);
+    debtToDelete = signal<any>(undefined);
     deletebookDialog = false;
     deleteSelecteddebtsDialog = false;
 
@@ -308,7 +308,7 @@ export class DebtsContainer implements OnInit {
     }
 
     confirmDeleteDebt(item: any) {
-        this.bookToDelete.set(item);
+        this.debtToDelete.set(item);
         this.confirmationModalService
             .confirm({
                 header: 'Confirmar Eliminación',
@@ -335,7 +335,7 @@ export class DebtsContainer implements OnInit {
     }
 
     deleteSingleBook() {
-        if (!this.bookToDelete()) return;
+        if (!this.debtToDelete()) return;
     }
 
     async onPageChange(event: PaginatorState) {
@@ -448,13 +448,11 @@ export class DebtsContainer implements OnInit {
     }
 
     handleMenuClick(event: { event: Event; item: any }) {
-        // Usamos el menú gemelo que SÍ está en el DOM del padre
         if (!this.responsiveMenu) return;
 
         const isPaid = event.item.isPaid;
         let allItems: MenuItem[] = [];
 
-        // Tu lógica original intacta
         if (!isPaid) {
             allItems = [
                 { label: 'Editar', icon: 'pi pi-pencil', command: () => this.openEditDebt(event.item) },
